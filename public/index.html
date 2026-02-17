@@ -81,7 +81,7 @@
         }
 
         .content {
-            flex: 1; padding: 20px 20px calc(var(--safe-bottom) + 80px);
+            flex: 1; padding: 20px 20px calc(var(--safe-bottom) + 130px);
             max-width: 640px; margin: 0 auto; width: 100%;
         }
 
@@ -211,156 +211,168 @@
         .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
         .empty-state-text { font-size: 14px; }
 
-        /* === SUBMISSION CARD === */
+        /* === SUBMISSION ROW === */
         .sub-card {
             background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); overflow: hidden;
-            margin-bottom: 12px;
+            border-radius: var(--radius); margin-bottom: 8px;
+            overflow: hidden; transition: background 0.2s, border-color 0.2s;
         }
-        .sub-card-embed {
-            position: relative; padding-top: 56.25%;
-            background: #000;
-        }
-        .sub-card-embed iframe {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; border: none;
-        }
-        .sub-card-body { padding: 16px; }
-        .sub-card-player {
-            font-size: 13px; color: var(--accent);
-            font-weight: 600; margin-bottom: 4px;
-        }
-        .sub-card-title {
-            font-size: 14px; font-weight: 500; margin-bottom: 6px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .sub-card-title.loading { color: var(--text-muted); font-size: 12px; }
-        .sub-card-comment {
-            font-size: 13px; color: var(--text-secondary);
-            font-style: italic; margin-bottom: 12px;
-        }
-
-        /* === THUMBNAIL CARD === */
-        .sub-card-thumb {
-            position: relative; padding-top: 56.25%;
-            background: #000; cursor: pointer; overflow: hidden;
-        }
-        .sub-card-thumb img {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%; min-height: 100%; object-fit: cover;
-            transition: transform 0.4s, filter 0.4s;
-        }
-        .sub-card-thumb:hover img {
-            transform: translate(-50%, -50%) scale(1.05);
-            filter: brightness(1.1);
-        }
-        .play-overlay {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, 0.3);
-            transition: background 0.2s;
-        }
-        .sub-card-thumb:hover .play-overlay { background: rgba(0, 0, 0, 0.1); }
-        .play-btn-circle {
-            width: 56px; height: 56px; border-radius: 50%;
-            background: rgba(108, 92, 231, 0.85);
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 24px rgba(108, 92, 231, 0.4);
-        }
-        .sub-card-thumb:hover .play-btn-circle {
-            transform: scale(1.12);
-            box-shadow: 0 4px 32px rgba(108, 92, 231, 0.6);
-        }
-        .play-btn-circle svg { width: 22px; height: 22px; fill: white; margin-left: 2px; }
-
-        /* Playing state */
+        .sub-card:hover { background: var(--bg-card-hover); }
         .sub-card.playing {
             border-color: var(--accent);
-            box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(108, 92, 231, 0.08);
+            background: rgba(108, 92, 231, 0.06);
         }
+        .sub-card.own-sub { opacity: 0.5; }
+        .sub-card-row {
+            display: flex; align-items: center;
+            gap: 12px; padding: 10px 14px;
+        }
+        .sub-card-art {
+            width: 48px; height: 48px; border-radius: 6px;
+            overflow: hidden; flex-shrink: 0;
+            position: relative; cursor: pointer;
+        }
+        .sub-card-art img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .sub-card-art .art-play {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .sub-card-art:hover .art-play { opacity: 1; }
+        .sub-card.playing .sub-card-art .art-play {
+            opacity: 1; background: rgba(108, 92, 231, 0.6);
+        }
+        .art-play svg { width: 18px; height: 18px; fill: white; }
+        .sub-card-info { flex: 1; min-width: 0; }
+        .sub-card-title {
+            font-size: 14px; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+        .sub-card-title.loading { color: var(--text-muted); font-size: 12px; }
+        .sub-card-player {
+            font-size: 12px; color: var(--accent); font-weight: 600;
+        }
+        .sub-card-comment {
+            font-size: 11px; color: var(--text-secondary);
+            font-style: italic;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+        .sub-card-details { padding: 0 14px 10px; }
 
-        /* === VISUALIZER === */
-        .visualizer {
-            display: flex; align-items: flex-end; justify-content: center;
-            gap: 3px; height: 20px; padding: 6px 16px 0;
-            opacity: 0; transition: opacity 0.3s;
+        /* === NOW PLAYING BAR === */
+        .now-playing {
+            position: fixed;
+            bottom: calc(var(--safe-bottom) + 52px);
+            left: 0; right: 0; z-index: 99;
+            background: rgba(12, 12, 18, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--accent);
+            box-shadow: 0 -4px 20px rgba(108, 92, 231, 0.15);
+            display: none;
         }
-        .sub-card.playing .visualizer { opacity: 1; }
-        .viz-bar {
-            width: 3px; border-radius: 2px;
-            background: linear-gradient(to top, var(--accent), var(--accent-secondary));
+        .now-playing.active { display: block; }
+        .np-inner {
+            display: flex; align-items: center;
+            gap: 12px; padding: 8px 16px;
+            max-width: 640px; margin: 0 auto;
         }
-        .viz-bar:nth-child(1) { animation: vizPulse 0.45s ease-in-out 0s infinite alternate; }
-        .viz-bar:nth-child(2) { animation: vizPulse 0.55s ease-in-out 0.1s infinite alternate; }
-        .viz-bar:nth-child(3) { animation: vizPulse 0.5s ease-in-out 0.2s infinite alternate; }
-        .viz-bar:nth-child(4) { animation: vizPulse 0.6s ease-in-out 0.05s infinite alternate; }
-        .viz-bar:nth-child(5) { animation: vizPulse 0.48s ease-in-out 0.15s infinite alternate; }
-        .viz-bar:nth-child(6) { animation: vizPulse 0.52s ease-in-out 0.25s infinite alternate; }
-        .viz-bar:nth-child(7) { animation: vizPulse 0.58s ease-in-out 0.08s infinite alternate; }
-        @keyframes vizPulse {
-            0% { transform: scaleY(0.3); opacity: 0.6; }
-            100% { transform: scaleY(1); opacity: 1; }
+        .np-video {
+            width: 64px; height: 36px; border-radius: 4px;
+            overflow: hidden; flex-shrink: 0; background: #000;
         }
+        .np-video iframe {
+            width: 64px; height: 36px; border: none;
+        }
+        .np-info { flex: 1; min-width: 0; }
+        .np-title {
+            font-size: 12px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .np-player { font-size: 11px; color: var(--accent); }
+        .np-viz {
+            display: flex; align-items: flex-end;
+            gap: 2px; height: 28px; flex-shrink: 0;
+        }
+        .np-viz-bar {
+            width: 3px; border-radius: 1px 1px 0 0;
+            background: linear-gradient(to top, #00b894, #fdcb6e, #e84393);
+            animation: vizSpec ease-in-out infinite alternate;
+        }
+        @keyframes vizSpec {
+            0% { transform: scaleY(0.1); }
+            100% { transform: scaleY(1); }
+        }
+        .np-close {
+            background: none; border: none;
+            color: var(--text-muted); font-size: 20px;
+            cursor: pointer; padding: 4px 8px; flex-shrink: 0;
+            transition: color 0.2s;
+        }
+        .np-close:hover { color: var(--text-primary); }
 
-        /* === VOTE CONTROLS === */
+        /* === VOTE CONTROLS (compact) === */
         .vote-row {
-            display: flex; align-items: center; gap: 16px;
-            padding: 12px 0 4px;
+            display: flex; align-items: center; gap: 6px;
+            flex-shrink: 0;
         }
         .vote-btn {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: var(--bg-input); border: 2px solid var(--border);
-            color: var(--text-primary); font-size: 20px; font-weight: 700;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--bg-input); border: 1px solid var(--border);
+            color: var(--text-primary); font-size: 15px; font-weight: 700;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+            transition: all 0.15s;
         }
         .vote-btn:hover:not(:disabled) {
             border-color: var(--accent);
-            box-shadow: 0 0 12px var(--accent-glow);
-            transform: scale(1.1);
+            box-shadow: 0 0 8px var(--accent-glow);
         }
-        .vote-btn:active:not(:disabled) { transform: scale(0.95); }
         .vote-btn:disabled { opacity: 0.25; cursor: not-allowed; }
         .vote-btn.vote-minus { color: var(--accent-secondary); }
         .vote-btn.vote-plus { color: var(--accent); }
         .vote-count {
-            font-family: var(--font-mono); font-size: 22px;
-            font-weight: 700; min-width: 36px; text-align: center;
+            font-family: var(--font-mono); font-size: 15px;
+            font-weight: 700; min-width: 20px; text-align: center;
             background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .vote-points-remaining {
             font-family: var(--font-mono); font-size: 13px;
             color: var(--text-secondary); text-align: center;
-            padding: 14px; margin-bottom: 16px;
+            padding: 12px; margin-bottom: 12px;
             border: 1px solid var(--border); border-radius: var(--radius-sm);
             background: rgba(108, 92, 231, 0.04);
         }
         .vote-points-remaining strong {
-            color: var(--accent); font-size: 24px;
+            color: var(--accent); font-size: 20px;
             text-shadow: 0 0 20px var(--accent-glow);
         }
 
         /* === RESULTS === */
+        .result-rank {
+            font-family: var(--font-mono); font-size: 14px;
+            font-weight: 700; color: var(--text-muted);
+            min-width: 28px; flex-shrink: 0; text-align: center;
+        }
+        .result-rank-1 { color: #ffd700; }
+        .result-rank-2 { color: #c0c0c0; }
+        .result-rank-3 { color: #cd7f32; }
+        .result-points {
+            font-family: var(--font-mono); font-size: 16px;
+            font-weight: 700; color: var(--accent); flex-shrink: 0;
+        }
         .result-bar {
-            height: 6px; background: var(--bg-input);
-            border-radius: 3px; overflow: hidden; margin-top: 8px;
+            height: 4px; background: var(--bg-input);
+            border-radius: 2px; overflow: hidden;
         }
         .result-bar-fill {
-            height: 100%; border-radius: 3px;
+            height: 100%; border-radius: 2px;
             background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
             transition: width 0.6s ease;
-        }
-        .result-points {
-            font-family: var(--font-mono); font-size: 24px;
-            font-weight: 700; color: var(--accent);
-        }
-        .result-rank {
-            font-family: var(--font-mono); font-size: 12px;
-            color: var(--text-muted); margin-bottom: 4px;
         }
 
         /* === LEADERBOARD === */
@@ -506,6 +518,18 @@
                 <span class="section-title">Leaderboard</span>
             </div>
             <div id="leaderboardContent"></div>
+        </div>
+    </div>
+
+    <div id="nowPlaying" class="now-playing">
+        <div class="np-inner">
+            <div class="np-video" id="npVideo"></div>
+            <div class="np-info">
+                <div class="np-title" id="npTitle">Now Playing</div>
+                <div class="np-player" id="npPlayer"></div>
+            </div>
+            <div class="np-viz" id="npViz"></div>
+            <button class="np-close" onclick="stopPlayback()">&times;</button>
         </div>
     </div>
 
@@ -704,12 +728,14 @@ function switchTab(tab) {
     
     state.screen = tab;
     state.history = [];
-    
+    stopPlayback();
+
     if (tab === 'leaderboard') loadLeaderboard();
     if (tab === 'rounds') loadRounds();
 }
 
 function goBack() {
+    stopPlayback();
     document.getElementById('roundDetail').classList.remove('active');
     document.getElementById('roundsScreen').classList.add('active');
     document.getElementById('backBtn').classList.remove('visible');
@@ -822,12 +848,17 @@ async function openRound(id) {
             `;
             if (mySubmission) {
                 html += `
-                    <div class="sub-card">
-                        ${renderThumbnail(mySubmission.youtube_id)}
-                        <div class="sub-card-body">
-                            <div class="sub-card-player">Your submission</div>
-                            <div class="sub-card-title loading" data-ytid="${esc(mySubmission.youtube_id)}">Loading title...</div>
-                            ${mySubmission.comment ? `<div class="sub-card-comment">"${esc(mySubmission.comment)}"</div>` : ''}
+                    <div class="sub-card" data-player="Your submission">
+                        <div class="sub-card-row">
+                            <div class="sub-card-art" onclick="playVideo('${esc(mySubmission.youtube_id)}', this)">
+                                <img src="https://img.youtube.com/vi/${esc(mySubmission.youtube_id)}/hqdefault.jpg" alt="">
+                                <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
+                            </div>
+                            <div class="sub-card-info">
+                                <div class="sub-card-title loading" data-ytid="${esc(mySubmission.youtube_id)}">Loading title...</div>
+                                <div class="sub-card-player">Your submission</div>
+                                ${mySubmission.comment ? `<div class="sub-card-comment">"${esc(mySubmission.comment)}"</div>` : ''}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -858,13 +889,18 @@ async function openRound(id) {
             html += shuffled.map(s => {
                 const isOwn = s.player_name === state.player;
                 return `
-                    <div class="sub-card" ${isOwn ? 'style="opacity:0.5"' : ''}>
-                        ${renderThumbnail(s.youtube_id)}
-                        <div class="sub-card-body">
-                            <div class="sub-card-player">${esc(s.player_name)}</div>
-                            <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
-                            ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
-                            ${isOwn ? '<div style="font-size:12px;color:var(--text-muted)">You can\'t vote for your own</div>' : `
+                    <div class="sub-card ${isOwn ? 'own-sub' : ''}" data-player="${esc(s.player_name)}">
+                        <div class="sub-card-row">
+                            <div class="sub-card-art" onclick="playVideo('${esc(s.youtube_id)}', this)">
+                                <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
+                                <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
+                            </div>
+                            <div class="sub-card-info">
+                                <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
+                                <div class="sub-card-player">${esc(s.player_name)}</div>
+                                ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
+                            </div>
+                            ${isOwn ? '' : `
                                 <div class="vote-row">
                                     <button class="vote-btn vote-minus" onclick="adjustVote(${s.id}, -1, ${maxPoints})" ${!state.votes[s.id] ? 'disabled' : ''}>−</button>
                                     <span class="vote-count" id="vc-${s.id}">${state.votes[s.id] || 0}</span>
@@ -883,18 +919,21 @@ async function openRound(id) {
             const maxPoints = subs.length > 0 ? Math.max(...subs.map(s => s.total_points), 1) : 1;
             
             html += subs.map((s, i) => `
-                <div class="sub-card">
-                    ${renderThumbnail(s.youtube_id)}
-                    <div class="sub-card-body">
-                        <div class="result-rank">#${i + 1}</div>
-                        <div style="display:flex;justify-content:space-between;align-items:center">
-                            <div style="flex:1;min-width:0">
-                                <div class="sub-card-player">${esc(s.player_name)}</div>
-                                <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
-                                ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
-                            </div>
-                            <div class="result-points">${s.total_points}</div>
+                <div class="sub-card" data-player="${esc(s.player_name)}">
+                    <div class="sub-card-row">
+                        <div class="result-rank ${i < 3 ? 'result-rank-' + (i + 1) : ''}">#${i + 1}</div>
+                        <div class="sub-card-art" onclick="playVideo('${esc(s.youtube_id)}', this)">
+                            <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
+                            <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
                         </div>
+                        <div class="sub-card-info">
+                            <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
+                            <div class="sub-card-player">${esc(s.player_name)}</div>
+                            ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
+                        </div>
+                        <div class="result-points">${s.total_points}</div>
+                    </div>
+                    <div class="sub-card-details">
                         <div class="result-bar">
                             <div class="result-bar-fill" style="width:${(s.total_points / maxPoints) * 100}%"></div>
                         </div>
@@ -1009,9 +1048,13 @@ function showSubmitSong() {
         if (id) {
             preview.innerHTML = `
                 <div class="sub-card" style="margin:0">
-                    ${renderThumbnail(id)}
-                    <div class="sub-card-body">
-                        <div class="sub-card-title loading" data-ytid="${esc(id)}">Loading title...</div>
+                    <div class="sub-card-row">
+                        <div class="sub-card-art">
+                            <img src="https://img.youtube.com/vi/${esc(id)}/hqdefault.jpg" alt="">
+                        </div>
+                        <div class="sub-card-info">
+                            <div class="sub-card-title loading" data-ytid="${esc(id)}">Loading title...</div>
+                        </div>
                     </div>
                 </div>`;
             preview.classList.remove('hidden');
@@ -1139,62 +1182,62 @@ async function loadLeaderboard() {
     }
 }
 
-// ===== THUMBNAIL & PLAYER =====
-function renderThumbnail(ytId) {
-    return `
-        <div class="sub-card-thumb" onclick="playVideo('${ytId}', this)">
-            <img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" alt="" loading="lazy">
-            <div class="play-overlay">
-                <div class="play-btn-circle">
-                    <svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg>
-                </div>
-            </div>
-        </div>
-        <div class="visualizer">
-            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-            <div class="viz-bar"></div>
-        </div>`;
-}
+// ===== NOW PLAYING =====
+let currentlyPlaying = null;
 
 function playVideo(ytId, el) {
-    const card = el.closest('.sub-card');
+    const card = el?.closest('.sub-card');
+    const playerName = card?.dataset?.player || '';
 
-    // Stop other playing videos
-    document.querySelectorAll('.sub-card.playing').forEach(c => {
-        if (c === card) return;
-        const embed = c.querySelector('.sub-card-embed');
-        if (embed) {
-            const iframe = embed.querySelector('iframe');
-            const playingId = iframe?.src.match(/embed\/([^?]+)/)?.[1];
-            if (playingId) {
-                embed.outerHTML = renderThumbnail(playingId);
+    // Remove playing state from all rows
+    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
+
+    // Highlight this row
+    if (card) card.classList.add('playing');
+
+    // Show now-playing bar
+    const np = document.getElementById('nowPlaying');
+    np.classList.add('active');
+
+    // Load iframe in the now-playing bar
+    document.getElementById('npVideo').innerHTML =
+        `<iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+
+    // Set info
+    document.getElementById('npTitle').textContent = videoTitleCache[ytId] || 'Loading...';
+    document.getElementById('npPlayer').textContent = playerName;
+
+    // Generate Winamp-style spectrum bars
+    document.getElementById('npViz').innerHTML = generateVizBars(20);
+
+    currentlyPlaying = ytId;
+
+    // Fetch title if not cached
+    if (!videoTitleCache[ytId]) {
+        fetchVideoTitle(ytId).then(t => {
+            if (t && currentlyPlaying === ytId) {
+                document.getElementById('npTitle').textContent = t;
             }
-        }
-        c.classList.remove('playing');
-    });
+        });
+    }
+}
 
-    // Replace thumbnail with iframe
-    const thumb = card.querySelector('.sub-card-thumb');
-    const viz = card.querySelector('.visualizer');
-    if (thumb) {
-        thumb.outerHTML = `
-            <div class="sub-card-embed">
-                <iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1"
-                        allowfullscreen allow="autoplay; encrypted-media"></iframe>
-            </div>`;
+function stopPlayback() {
+    document.getElementById('nowPlaying').classList.remove('active');
+    document.getElementById('npVideo').innerHTML = '';
+    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
+    currentlyPlaying = null;
+}
+
+function generateVizBars(count) {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        const dur = (0.3 + Math.random() * 0.5).toFixed(2);
+        const delay = (Math.random() * 0.5).toFixed(2);
+        const h = Math.round(30 + Math.random() * 70);
+        html += `<div class="np-viz-bar" style="height:${h}%;animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
     }
-    if (viz) viz.remove();
-    // Re-add visualizer inside card after embed
-    const embed = card.querySelector('.sub-card-embed');
-    if (embed) {
-        embed.insertAdjacentHTML('afterend',
-            '<div class="visualizer">' +
-            '<div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>' +
-            '<div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>' +
-            '<div class="viz-bar"></div></div>');
-    }
-    card.classList.add('playing');
+    return html;
 }
 
 // ===== VIDEO TITLES =====
