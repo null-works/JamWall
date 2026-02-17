@@ -267,11 +267,12 @@
         /* === NOW PLAYING BAR === */
         .now-playing {
             position: fixed;
-            bottom: calc(var(--safe-bottom) + 52px);
-            left: 0; right: 0; z-index: 99;
+            bottom: calc(var(--safe-bottom) + 72px);
+            left: 0; right: 0; z-index: 101;
             background: rgba(12, 12, 18, 0.95);
             backdrop-filter: blur(20px);
             border-top: 1px solid var(--accent);
+            border-bottom: 1px solid var(--border);
             box-shadow: 0 -4px 20px rgba(108, 92, 231, 0.15);
             display: none;
         }
@@ -302,7 +303,9 @@
             width: 3px; border-radius: 1px 1px 0 0;
             background: linear-gradient(to top, #00b894, #fdcb6e, #e84393);
             animation: vizSpec ease-in-out infinite alternate;
+            animation-play-state: paused;
         }
+        .np-viz.playing .np-viz-bar { animation-play-state: running; }
         @keyframes vizSpec {
             0% { transform: scaleY(0.1); }
             100% { transform: scaleY(1); }
@@ -1184,6 +1187,19 @@ async function loadLeaderboard() {
 
 // ===== NOW PLAYING =====
 let currentlyPlaying = null;
+let ytPlayer = null;
+let ytApiReady = false;
+
+// Load YouTube IFrame API
+(function loadYTApi() {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+})();
+
+function onYouTubeIframeAPIReady() {
+    ytApiReady = true;
+}
 
 function playVideo(ytId, el) {
     const card = el?.closest('.sub-card');
@@ -1196,19 +1212,45 @@ function playVideo(ytId, el) {
     if (card) card.classList.add('playing');
 
     // Show now-playing bar
-    const np = document.getElementById('nowPlaying');
-    np.classList.add('active');
-
-    // Load iframe in the now-playing bar
-    document.getElementById('npVideo').innerHTML =
-        `<iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    document.getElementById('nowPlaying').classList.add('active');
 
     // Set info
     document.getElementById('npTitle').textContent = videoTitleCache[ytId] || 'Loading...';
     document.getElementById('npPlayer').textContent = playerName;
 
-    // Generate Winamp-style spectrum bars
-    document.getElementById('npViz').innerHTML = generateVizBars(20);
+    // Generate viz bars (start paused until player fires PLAYING)
+    const viz = document.getElementById('npViz');
+    viz.innerHTML = generateVizBars(20);
+    viz.classList.remove('playing');
+
+    // Destroy old player
+    if (ytPlayer) { try { ytPlayer.destroy(); } catch(e) {} ytPlayer = null; }
+
+    // Create player via IFrame API (or fallback to raw iframe)
+    const videoContainer = document.getElementById('npVideo');
+    if (ytApiReady && typeof YT !== 'undefined' && YT.Player) {
+        videoContainer.innerHTML = '<div id="npPlayerEl"></div>';
+        ytPlayer = new YT.Player('npPlayerEl', {
+            width: 64, height: 36,
+            videoId: ytId,
+            playerVars: { autoplay: 1, controls: 0, modestbranding: 1 },
+            events: {
+                onStateChange: function(e) {
+                    const viz = document.getElementById('npViz');
+                    if (e.data === YT.PlayerState.PLAYING) {
+                        viz.classList.add('playing');
+                    } else {
+                        viz.classList.remove('playing');
+                    }
+                }
+            }
+        });
+    } else {
+        // Fallback: raw iframe (no play state detection)
+        videoContainer.innerHTML =
+            `<iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+        viz.classList.add('playing');
+    }
 
     currentlyPlaying = ytId;
 
@@ -1223,8 +1265,10 @@ function playVideo(ytId, el) {
 }
 
 function stopPlayback() {
+    if (ytPlayer) { try { ytPlayer.destroy(); } catch(e) {} ytPlayer = null; }
     document.getElementById('nowPlaying').classList.remove('active');
     document.getElementById('npVideo').innerHTML = '';
+    document.getElementById('npViz').classList.remove('playing');
     document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
     currentlyPlaying = null;
 }
