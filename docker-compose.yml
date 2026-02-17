@@ -1,0 +1,21 @@
+services:
+  jamwall:
+    build: .
+    container_name: jamwall
+    restart: unless-stopped
+    ports:
+      - "8069:80"
+    volumes:
+      - jw-data:/var/www/data
+    environment:
+      - LEAGUE_PASSWORD=changeme
+      - LEAGUE_NAME=JamWall
+    networks:
+      - web
+
+volumes:
+  jw-data:
+
+networks:
+  web:
+    external: true
