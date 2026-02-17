@@ -12,15 +12,27 @@ if [ ! -f /var/www/data/jamwall.sqlite ] && [ -f /var/www/data/schema.sql ]; the
     echo "Database initialized."
 fi
 
-# Set password from env if provided
+# Set password from env if provided (use PHP parameterized query to avoid SQL injection)
 if [ -n "$LEAGUE_PASSWORD" ]; then
-    sqlite3 /var/www/data/jamwall.sqlite "UPDATE settings SET value='$LEAGUE_PASSWORD' WHERE key='password';"
+    php -r '
+        $db = new SQLite3("/var/www/data/jamwall.sqlite");
+        $stmt = $db->prepare("UPDATE settings SET value = ? WHERE key = ?");
+        $stmt->bindValue(1, $argv[1]);
+        $stmt->bindValue(2, "password");
+        $stmt->execute();
+    ' -- "$LEAGUE_PASSWORD"
     echo "Password set from environment."
 fi
 
 # Set league name from env if provided
 if [ -n "$LEAGUE_NAME" ]; then
-    sqlite3 /var/www/data/jamwall.sqlite "UPDATE settings SET value='$LEAGUE_NAME' WHERE key='league_name';"
+    php -r '
+        $db = new SQLite3("/var/www/data/jamwall.sqlite");
+        $stmt = $db->prepare("UPDATE settings SET value = ? WHERE key = ?");
+        $stmt->bindValue(1, $argv[1]);
+        $stmt->bindValue(2, "league_name");
+        $stmt->execute();
+    ' -- "$LEAGUE_NAME"
 fi
 
 # Start PHP-FPM in background

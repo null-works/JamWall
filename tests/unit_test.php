@@ -26,11 +26,11 @@ function assertEqual($expected, $actual, string $testName): void {
 }
 
 // --- Load only the pure functions from db.php (no DB needed) ---
-// We extract and eval just the function definitions to avoid DB_PATH / getDB side effects.
+// These must be kept in sync with api/db.php.
 
 function extractYouTubeId(string $url): ?string {
     $patterns = [
-        '/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/',
+        '/(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?(?:[^#]*&)?v=)([a-zA-Z0-9_-]{11})/',
     ];
     foreach ($patterns as $pattern) {
         if (preg_match($pattern, $url, $matches)) {
@@ -41,7 +41,7 @@ function extractYouTubeId(string $url): ?string {
 }
 
 function getRoundPhase(array $round): string {
-    $now = date('c');
+    $now = date('Y-m-d\TH:i:s');
     if ($now < $round['submission_deadline']) {
         return 'submitting';
     } elseif ($now < $round['voting_deadline']) {
@@ -63,9 +63,19 @@ assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://youtube.com/watch?v=dQw4w9W
 assertEqual('dQw4w9WgXcQ', extractYouTubeId('http://www.youtube.com/watch?v=dQw4w9WgXcQ'),
     'Watch URL with http');
 assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42'),
-    'Watch URL with extra params');
+    'Watch URL with extra params after v');
 assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmE'),
-    'Watch URL with playlist param');
+    'Watch URL with playlist param after v');
+
+// v= not as first query parameter (previously broken)
+assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://www.youtube.com/watch?list=PLrAXtmE&v=dQw4w9WgXcQ'),
+    'Watch URL with v= as second param');
+assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://www.youtube.com/watch?feature=share&v=dQw4w9WgXcQ'),
+    'Watch URL with feature param before v');
+assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://www.youtube.com/watch?si=abcdef&list=PL123&v=dQw4w9WgXcQ'),
+    'Watch URL with multiple params before v');
+assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://music.youtube.com/watch?list=RDAMVM&v=dQw4w9WgXcQ'),
+    'YouTube Music with v= as second param');
 
 // Short URLs (youtu.be)
 assertEqual('dQw4w9WgXcQ', extractYouTubeId('https://youtu.be/dQw4w9WgXcQ'),
@@ -114,53 +124,67 @@ assertEqual(null, extractYouTubeId('https://youtube.com/channel/UCxxxxxx'),
 // =============================================================
 echo "\n=== getRoundPhase() ===\n\n";
 
+// Use the same format as the fixed getRoundPhase: Y-m-d\TH:i:s (no timezone offset)
+$fmt = 'Y-m-d\TH:i:s';
+
 // Future deadlines → submitting
-$futureSubmission = date('c', strtotime('+1 hour'));
-$futureVoting = date('c', strtotime('+2 hours'));
+$futureSubmission = date($fmt, strtotime('+1 hour'));
+$futureVoting = date($fmt, strtotime('+2 hours'));
 assertEqual('submitting', getRoundPhase([
     'submission_deadline' => $futureSubmission,
     'voting_deadline' => $futureVoting,
 ]), 'Both deadlines in future → submitting');
 
 // Submission past, voting future → voting
-$pastSubmission = date('c', strtotime('-1 hour'));
-$futureVoting2 = date('c', strtotime('+1 hour'));
+$pastSubmission = date($fmt, strtotime('-1 hour'));
+$futureVoting2 = date($fmt, strtotime('+1 hour'));
 assertEqual('voting', getRoundPhase([
     'submission_deadline' => $pastSubmission,
     'voting_deadline' => $futureVoting2,
 ]), 'Submission past, voting future → voting');
 
 // Both past → results
-$pastSubmission2 = date('c', strtotime('-2 hours'));
-$pastVoting = date('c', strtotime('-1 hour'));
+$pastSubmission2 = date($fmt, strtotime('-2 hours'));
+$pastVoting = date($fmt, strtotime('-1 hour'));
 assertEqual('results', getRoundPhase([
     'submission_deadline' => $pastSubmission2,
     'voting_deadline' => $pastVoting,
 ]), 'Both deadlines past → results');
 
 // Far future (next year)
-$farFutureSubmission = date('c', strtotime('+1 year'));
-$farFutureVoting = date('c', strtotime('+2 years'));
+$farFutureSubmission = date($fmt, strtotime('+1 year'));
+$farFutureVoting = date($fmt, strtotime('+2 years'));
 assertEqual('submitting', getRoundPhase([
     'submission_deadline' => $farFutureSubmission,
     'voting_deadline' => $farFutureVoting,
 ]), 'Far future deadlines → submitting');
 
 // Far past
-$farPastSubmission = date('c', strtotime('-1 year'));
-$farPastVoting = date('c', strtotime('-6 months'));
+$farPastSubmission = date($fmt, strtotime('-1 year'));
+$farPastVoting = date($fmt, strtotime('-6 months'));
 assertEqual('results', getRoundPhase([
     'submission_deadline' => $farPastSubmission,
     'voting_deadline' => $farPastVoting,
 ]), 'Far past deadlines → results');
 
 // Edge: submission just barely in the past (1 second ago)
-$justPast = date('c', time() - 1);
-$futureVoting3 = date('c', strtotime('+1 hour'));
+$justPast = date($fmt, time() - 1);
+$futureVoting3 = date($fmt, strtotime('+1 hour'));
 assertEqual('voting', getRoundPhase([
     'submission_deadline' => $justPast,
     'voting_deadline' => $futureVoting3,
 ]), 'Submission 1s ago, voting future → voting');
+
+// Cross-format: deadlines stored without timezone offset should still compare correctly
+assertEqual('submitting', getRoundPhase([
+    'submission_deadline' => '2099-12-31T23:59:59',
+    'voting_deadline' => '2099-12-31T23:59:59',
+]), 'Far future ISO date without offset → submitting');
+
+assertEqual('results', getRoundPhase([
+    'submission_deadline' => '2000-01-01T00:00:00',
+    'voting_deadline' => '2000-01-01T00:00:01',
+]), 'Far past ISO date without offset → results');
 
 // =============================================================
 // Summary

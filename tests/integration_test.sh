@@ -260,12 +260,26 @@ result=$(apicall POST "submissions.php" "${CHARLIE_HEADERS[@]}" \
 code="${result%%|*}"; body="${result#*|}"
 assert_http_code "Duplicate song in same round rejected" "400" "$code"
 
+# Alice resubmits same song with updated comment (should succeed after duplicate check fix)
+result=$(apicall POST "submissions.php" "${AUTH_HEADERS[@]}" \
+    -d "{\"round_id\":$ROUND_ID,\"youtube_url\":\"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\"comment\":\"Updated comment on same song\"}")
+code="${result%%|*}"; body="${result#*|}"
+assert_http_code "Alice resubmits same song (comment update)" "201" "$code"
+
 # Alice resubmits (upsert) with a different song
 result=$(apicall POST "submissions.php" "${AUTH_HEADERS[@]}" \
     -d "{\"round_id\":$ROUND_ID,\"youtube_url\":\"https://www.youtube.com/watch?v=L_jWHffIx5E\",\"comment\":\"Changed my mind - Smells Like Teen Spirit\"}")
 code="${result%%|*}"; body="${result#*|}"
 assert_http_code "Alice resubmits (upsert)" "201" "$code"
 assert_contains "New youtube_id" '"youtube_id":"L_jWHffIx5E"' "$body"
+
+# Submit with v= as non-first query param (tests regex fix)
+DAVE_HEADERS=(-H "X-Password: jamwall" -H "X-Player: Dave")
+result=$(apicall POST "submissions.php" "${DAVE_HEADERS[@]}" \
+    -d "{\"round_id\":$ROUND_ID,\"youtube_url\":\"https://www.youtube.com/watch?feature=share&v=hT_nvWreIhg\",\"comment\":\"v not first param\"}")
+code="${result%%|*}"; body="${result#*|}"
+assert_http_code "Submit with v= as non-first param" "201" "$code"
+assert_contains "Extracted ID from non-first v param" '"youtube_id":"hT_nvWreIhg"' "$body"
 
 # Invalid YouTube URL
 result=$(apicall POST "submissions.php" "${AUTH_HEADERS[@]}" \
@@ -352,8 +366,7 @@ echo ""
 echo "=== Results & Leaderboard ==="
 
 # Move round to results phase
-# Use space-separated format to match SQLite's datetime('now') used by leaderboard query
-PAST_VOTE=$(date -u -d "-1 minute" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -u -v-1M '+%Y-%m-%d %H:%M:%S')
+PAST_VOTE=$(date -u -d "-1 minute" '+%Y-%m-%dT%H:%M:%S' 2>/dev/null || date -u -v-1M '+%Y-%m-%dT%H:%M:%S')
 exec_sql "UPDATE rounds SET voting_deadline='$PAST_VOTE' WHERE id=$ROUND_ID;"
 
 # Verify results phase

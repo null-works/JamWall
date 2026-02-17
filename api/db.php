@@ -1,21 +1,27 @@
 <?php
 // Database connection and shared utilities
 
-define('DB_PATH', '/var/www/data/jamwall.sqlite');
-define('SCHEMA_PATH', '/var/www/data/schema.sql');
+if (!defined('DB_PATH')) define('DB_PATH', '/var/www/data/jamwall.sqlite');
+if (!defined('SCHEMA_PATH')) define('SCHEMA_PATH', '/var/www/data/schema.sql');
 
 function getDB(): SQLite3 {
+    static $instance = null;
+    if ($instance !== null) {
+        return $instance;
+    }
+
     $isNew = !file_exists(DB_PATH);
     $db = new SQLite3(DB_PATH);
     $db->enableExceptions(true);
     $db->exec('PRAGMA journal_mode=WAL');
     $db->exec('PRAGMA foreign_keys=ON');
-    
+
     if ($isNew) {
         $schema = file_get_contents(SCHEMA_PATH);
         $db->exec($schema);
     }
-    
+
+    $instance = $db;
     return $db;
 }
 
@@ -68,9 +74,9 @@ function getPlayerName(): string {
 
 function extractYouTubeId(string $url): ?string {
     $patterns = [
-        '/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/',
+        '/(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?(?:[^#]*&)?v=)([a-zA-Z0-9_-]{11})/',
     ];
-    
+
     foreach ($patterns as $pattern) {
         if (preg_match($pattern, $url, $matches)) {
             return $matches[1];
@@ -80,7 +86,7 @@ function extractYouTubeId(string $url): ?string {
 }
 
 function getRoundPhase(array $round): string {
-    $now = date('c');
+    $now = date('Y-m-d\TH:i:s');
     if ($now < $round['submission_deadline']) {
         return 'submitting';
     } elseif ($now < $round['voting_deadline']) {

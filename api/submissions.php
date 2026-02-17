@@ -110,10 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $youtubeId = extractYouTubeId($youtubeUrl);
     if (!$youtubeId) jsonError('Invalid YouTube URL');
     
-    // Check for duplicate YouTube ID in this round
-    $stmt = $db->prepare('SELECT id FROM submissions WHERE round_id = ? AND youtube_id = ?');
+    // Check for duplicate YouTube ID in this round (exclude own submission for resubmit)
+    $stmt = $db->prepare('SELECT id FROM submissions WHERE round_id = ? AND youtube_id = ? AND player_name != ?');
     $stmt->bindValue(1, $roundId);
     $stmt->bindValue(2, $youtubeId);
+    $stmt->bindValue(3, $player);
     if ($stmt->execute()->fetchArray()) {
         jsonError('This song has already been submitted for this round');
     }
