@@ -483,6 +483,48 @@
 
         /* === HIDDEN UTILITY === */
         .hidden { display: none !important; }
+
+        /* === DEBUG TAB === */
+        .debug-entry {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px;
+            margin-bottom: 8px; font-size: 13px;
+        }
+        .debug-entry-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px;
+        }
+        .debug-id {
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .debug-status {
+            display: inline-block; padding: 2px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 600;
+            text-transform: uppercase;
+        }
+        .debug-status-ready { background: rgba(0,184,148,0.15); color: var(--green); }
+        .debug-status-converting { background: rgba(253,203,110,0.15); color: var(--orange); }
+        .debug-status-failed { background: rgba(214,48,49,0.15); color: var(--red); }
+        .debug-status-stale_lock { background: rgba(214,48,49,0.15); color: var(--red); }
+        .debug-meta {
+            font-family: var(--font-mono); font-size: 11px;
+            color: var(--text-muted); margin-bottom: 6px;
+        }
+        .debug-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .debug-log {
+            margin-top: 10px; padding: 10px;
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono); font-size: 11px;
+            color: var(--text-secondary); white-space: pre-wrap;
+            word-break: break-all; max-height: 300px; overflow-y: auto;
+        }
+        .debug-disk {
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-muted); text-align: center;
+            padding: 8px; margin-bottom: 12px;
+        }
     </style>
 </head>
 <body>
@@ -527,6 +569,15 @@
             </div>
             <div id="leaderboardContent"></div>
         </div>
+
+        <!-- DEBUG -->
+        <div id="debugScreen" class="screen">
+            <div class="section-header">
+                <span class="section-title">Debug</span>
+                <button class="btn btn-secondary btn-sm" onclick="loadDebug()">Refresh</button>
+            </div>
+            <div id="debugContent"></div>
+        </div>
     </div>
 
     <div id="nowPlaying" class="now-playing">
@@ -556,6 +607,10 @@
         <button class="nav-btn" data-screen="leaderboard" onclick="switchTab('leaderboard')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21V11M16 21V7M12 21V3"/><path d="M3 21h18"/></svg>
             Standings
+        </button>
+        <button class="nav-btn" data-screen="debug" onclick="switchTab('debug')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h.01"/><path d="M8 16V8a4 4 0 018 0v8"/><path d="M4 12h2M18 12h2"/><path d="M6 8l1.5 1.5M16.5 9.5L18 8"/><path d="M6 16l1.5-1.5M16.5 14.5L18 16"/></svg>
+            Debug
         </button>
     </div>
 </div>
@@ -733,20 +788,22 @@ function handleLogin() {
 function switchTab(tab) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    const screen = document.getElementById(tab === 'rounds' ? 'roundsScreen' : 'leaderboardScreen');
-    screen.classList.add('active');
-    
+
+    const screenMap = { rounds: 'roundsScreen', leaderboard: 'leaderboardScreen', debug: 'debugScreen' };
+    const titleMap = { rounds: 'JamWall', leaderboard: 'Standings', debug: 'Debug' };
+    document.getElementById(screenMap[tab]).classList.add('active');
+
     document.querySelector(`[data-screen="${tab}"]`).classList.add('active');
     document.getElementById('backBtn').classList.remove('visible');
-    document.getElementById('topbarTitle').textContent = tab === 'rounds' ? 'JamWall' : 'Standings';
-    
+    document.getElementById('topbarTitle').textContent = titleMap[tab] || 'JamWall';
+
     state.screen = tab;
     state.history = [];
-    stopPlayback();
+    if (tab !== 'debug') stopPlayback();
 
     if (tab === 'leaderboard') loadLeaderboard();
     if (tab === 'rounds') loadRounds();
+    if (tab === 'debug') loadDebug();
 }
 
 function goBack() {
@@ -1310,6 +1367,9 @@ async function pollAudio(ytId) {
                 document.getElementById('npStatus').classList.add('hidden');
                 playAudioFile(data.url);
             }
+        } else if (data.status === 'failed') {
+            document.getElementById('npStatus').textContent = 'Conversion failed — check Debug tab';
+            document.getElementById('npStatus').classList.remove('hidden');
         } else {
             document.getElementById('npStatus').textContent = 'Converting...';
             document.getElementById('npStatus').classList.remove('hidden');
@@ -1397,6 +1457,84 @@ function stopPlayback() {
     if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
     currentlyPlaying = null;
+}
+
+// ===== DEBUG =====
+async function loadDebug() {
+    const container = document.getElementById('debugContent');
+    container.innerHTML = '<div class="spinner"></div>';
+
+    try {
+        const data = await api('debug.php?action=status');
+        let html = '';
+
+        html += `<div class="debug-disk">Disk: ${esc(data.disk_usage)}</div>`;
+
+        if (data.entries.length === 0) {
+            html += `<div class="empty-state"><div class="empty-state-text">No conversions yet</div></div>`;
+        } else {
+            html += data.entries.map(e => {
+                const thumb = `https://img.youtube.com/vi/${esc(e.youtube_id)}/default.jpg`;
+                const sizeStr = e.mp3_size ? `${(e.mp3_size / 1024 / 1024).toFixed(1)}MB` : '—';
+                const durStr = e.duration ? `${Math.floor(e.duration / 60)}:${String(Math.floor(e.duration % 60)).padStart(2, '0')}` : '—';
+                return `
+                    <div class="debug-entry" id="debug-${esc(e.youtube_id)}">
+                        <div class="debug-entry-header">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <img src="${thumb}" style="width:32px;height:24px;border-radius:3px;object-fit:cover">
+                                <span class="debug-id">${esc(e.youtube_id)}</span>
+                            </div>
+                            <span class="debug-status debug-status-${esc(e.status)}">${esc(e.status)}</span>
+                        </div>
+                        <div class="debug-meta">
+                            Size: ${sizeStr} &nbsp;|&nbsp; Duration: ${durStr}
+                            ${e.error ? ` &nbsp;|&nbsp; Error: ${esc(e.error)}` : ''}
+                            ${e.lock_age_seconds ? ` &nbsp;|&nbsp; Lock age: ${e.lock_age_seconds}s` : ''}
+                        </div>
+                        <div class="debug-actions">
+                            ${e.has_log ? `<button class="btn btn-secondary btn-sm" onclick="viewLog('${esc(e.youtube_id)}')">View Log</button>` : ''}
+                            <button class="btn btn-secondary btn-sm" onclick="retryConversion('${esc(e.youtube_id)}')">Retry</button>
+                        </div>
+                        <div class="debug-log hidden" id="log-${esc(e.youtube_id)}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
+    }
+}
+
+async function viewLog(ytId) {
+    const logEl = document.getElementById(`log-${ytId}`);
+    if (!logEl.classList.contains('hidden')) {
+        logEl.classList.add('hidden');
+        return;
+    }
+    logEl.textContent = 'Loading...';
+    logEl.classList.remove('hidden');
+
+    try {
+        const data = await api(`debug.php?action=log&id=${ytId}`);
+        logEl.textContent = data.log || '(empty log)';
+        logEl.scrollTop = logEl.scrollHeight;
+    } catch (e) {
+        logEl.textContent = 'Error loading log: ' + e.message;
+    }
+}
+
+async function retryConversion(ytId) {
+    try {
+        await api(`debug.php?action=retry&id=${ytId}`);
+        toast('Retrying conversion...', 'success');
+        // Clear cached ready state
+        delete audioReady[ytId];
+        setTimeout(loadDebug, 2000);
+    } catch (e) {
+        toast('Retry failed: ' + e.message, 'error');
+    }
 }
 
 // ===== VIDEO TITLES =====

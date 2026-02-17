@@ -22,9 +22,10 @@ if (file_exists($mp3Path)) {
     jsonResponse(['status' => 'ready', 'url' => "/audio/$ytId.mp3"]);
 }
 
-// Previous conversion failed — retry
+// Previous conversion failed — report it (debug tab can retry)
 if (file_exists($errPath)) {
-    unlink($errPath);
+    $errMsg = trim(file_get_contents($errPath));
+    jsonResponse(['status' => 'failed', 'error' => $errMsg]);
 }
 
 // Currently converting
