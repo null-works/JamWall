@@ -277,17 +277,22 @@
             display: none;
         }
         .now-playing.active { display: block; }
+        .np-progress {
+            height: 3px; background: var(--bg-input); cursor: pointer;
+        }
+        .np-progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            transition: width 0.2s linear;
+        }
         .np-inner {
             display: flex; align-items: center;
-            gap: 12px; padding: 8px 16px;
+            gap: 10px; padding: 8px 16px;
             max-width: 640px; margin: 0 auto;
         }
-        .np-video {
-            width: 64px; height: 36px; border-radius: 4px;
-            overflow: hidden; flex-shrink: 0; background: #000;
-        }
-        .np-video iframe {
-            width: 64px; height: 36px; border: none;
+        .np-art {
+            width: 40px; height: 40px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
         }
         .np-info { flex: 1; min-width: 0; }
         .np-title {
@@ -295,20 +300,20 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .np-player { font-size: 11px; color: var(--accent); }
-        .np-viz {
-            display: flex; align-items: flex-end;
-            gap: 2px; height: 28px; flex-shrink: 0;
+        .np-status {
+            font-size: 10px; color: var(--orange);
+            font-family: var(--font-mono);
         }
-        .np-viz-bar {
-            width: 3px; border-radius: 1px 1px 0 0;
-            background: linear-gradient(to top, #00b894, #fdcb6e, #e84393);
-            animation: vizSpec ease-in-out infinite alternate;
-            animation-play-state: paused;
+        .np-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .np-btn {
+            background: none; border: none;
+            color: var(--text-secondary); font-size: 18px;
+            cursor: pointer; padding: 4px 6px;
+            transition: color 0.2s;
         }
-        .np-viz.playing .np-viz-bar { animation-play-state: running; }
-        @keyframes vizSpec {
-            0% { transform: scaleY(0.1); }
-            100% { transform: scaleY(1); }
+        .np-btn:hover { color: var(--text-primary); }
+        .np-canvas {
+            flex-shrink: 0; border-radius: 2px;
         }
         .np-close {
             background: none; border: none;
@@ -525,13 +530,20 @@
     </div>
 
     <div id="nowPlaying" class="now-playing">
+        <div class="np-progress" onclick="seekAudio(event)">
+            <div class="np-progress-fill" id="npProgress"></div>
+        </div>
         <div class="np-inner">
-            <div class="np-video" id="npVideo"></div>
+            <img class="np-art" id="npArt" src="" alt="">
             <div class="np-info">
                 <div class="np-title" id="npTitle">Now Playing</div>
                 <div class="np-player" id="npPlayer"></div>
+                <div class="np-status hidden" id="npStatus"></div>
             </div>
-            <div class="np-viz" id="npViz"></div>
+            <div class="np-controls">
+                <button class="np-btn" id="npPlayPause" onclick="togglePlayPause()">&#9654;</button>
+            </div>
+            <canvas class="np-canvas" id="npCanvas" width="120" height="32"></canvas>
             <button class="np-close" onclick="stopPlayback()">&times;</button>
         </div>
     </div>
@@ -853,7 +865,7 @@ async function openRound(id) {
                 html += `
                     <div class="sub-card" data-player="Your submission">
                         <div class="sub-card-row">
-                            <div class="sub-card-art" onclick="playVideo('${esc(mySubmission.youtube_id)}', this)">
+                            <div class="sub-card-art" onclick="playTrack('${esc(mySubmission.youtube_id)}', this)">
                                 <img src="https://img.youtube.com/vi/${esc(mySubmission.youtube_id)}/hqdefault.jpg" alt="">
                                 <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
                             </div>
@@ -894,7 +906,7 @@ async function openRound(id) {
                 return `
                     <div class="sub-card ${isOwn ? 'own-sub' : ''}" data-player="${esc(s.player_name)}">
                         <div class="sub-card-row">
-                            <div class="sub-card-art" onclick="playVideo('${esc(s.youtube_id)}', this)">
+                            <div class="sub-card-art" onclick="playTrack('${esc(s.youtube_id)}', this)">
                                 <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
                                 <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
                             </div>
@@ -925,7 +937,7 @@ async function openRound(id) {
                 <div class="sub-card" data-player="${esc(s.player_name)}">
                     <div class="sub-card-row">
                         <div class="result-rank ${i < 3 ? 'result-rank-' + (i + 1) : ''}">#${i + 1}</div>
-                        <div class="sub-card-art" onclick="playVideo('${esc(s.youtube_id)}', this)">
+                        <div class="sub-card-art" onclick="playTrack('${esc(s.youtube_id)}', this)">
                             <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
                             <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
                         </div>
@@ -1185,72 +1197,84 @@ async function loadLeaderboard() {
     }
 }
 
-// ===== NOW PLAYING =====
+// ===== AUDIO PLAYER (Web Audio API) =====
 let currentlyPlaying = null;
-let ytPlayer = null;
-let ytApiReady = false;
+let audioEl = null;
+let audioCtx = null;
+let analyser = null;
+let sourceNode = null;
+let animFrameId = null;
+let audioReady = {}; // { ytId: url } — cache of ready audio URLs
 
-// Load YouTube IFrame API
-(function loadYTApi() {
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-})();
-
-function onYouTubeIframeAPIReady() {
-    ytApiReady = true;
+function initAudio() {
+    if (audioEl) return;
+    audioEl = new Audio();
+    audioEl.crossOrigin = 'anonymous';
+    audioEl.addEventListener('ended', () => stopPlayback());
+    audioEl.addEventListener('timeupdate', () => {
+        if (audioEl.duration) {
+            const pct = (audioEl.currentTime / audioEl.duration) * 100;
+            document.getElementById('npProgress').style.width = pct + '%';
+        }
+    });
+    audioEl.addEventListener('play', () => {
+        document.getElementById('npPlayPause').innerHTML = '&#9646;&#9646;';
+    });
+    audioEl.addEventListener('pause', () => {
+        document.getElementById('npPlayPause').innerHTML = '&#9654;';
+    });
 }
 
-function playVideo(ytId, el) {
+function initAudioContext() {
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = 0.8;
+    sourceNode = audioCtx.createMediaElementSource(audioEl);
+    sourceNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+}
+
+function playTrack(ytId, el) {
+    initAudio();
+
     const card = el?.closest('.sub-card');
     const playerName = card?.dataset?.player || '';
 
-    // Remove playing state from all rows
-    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
+    // If same track, toggle play/pause
+    if (currentlyPlaying === ytId && audioEl.src) {
+        togglePlayPause();
+        return;
+    }
 
-    // Highlight this row
+    // Stop current visualization
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
+    // Highlight row
+    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
     if (card) card.classList.add('playing');
 
     // Show now-playing bar
     document.getElementById('nowPlaying').classList.add('active');
+    document.getElementById('npProgress').style.width = '0%';
 
     // Set info
     document.getElementById('npTitle').textContent = videoTitleCache[ytId] || 'Loading...';
     document.getElementById('npPlayer').textContent = playerName;
+    document.getElementById('npArt').src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
 
-    // Generate viz bars (start paused until player fires PLAYING)
-    const viz = document.getElementById('npViz');
-    viz.innerHTML = generateVizBars(20);
-    viz.classList.remove('playing');
+    // Clear status
+    const statusEl = document.getElementById('npStatus');
+    statusEl.classList.add('hidden');
+    statusEl.textContent = '';
 
-    // Destroy old player
-    if (ytPlayer) { try { ytPlayer.destroy(); } catch(e) {} ytPlayer = null; }
-
-    // Create player via IFrame API (or fallback to raw iframe)
-    const videoContainer = document.getElementById('npVideo');
-    if (ytApiReady && typeof YT !== 'undefined' && YT.Player) {
-        videoContainer.innerHTML = '<div id="npPlayerEl"></div>';
-        ytPlayer = new YT.Player('npPlayerEl', {
-            width: 64, height: 36,
-            videoId: ytId,
-            playerVars: { autoplay: 1, controls: 0, modestbranding: 1 },
-            events: {
-                onStateChange: function(e) {
-                    const viz = document.getElementById('npViz');
-                    if (e.data === YT.PlayerState.PLAYING) {
-                        viz.classList.add('playing');
-                    } else {
-                        viz.classList.remove('playing');
-                    }
-                }
-            }
-        });
-    } else {
-        // Fallback: raw iframe (no play state detection)
-        videoContainer.innerHTML =
-            `<iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-        viz.classList.add('playing');
-    }
+    // Clear canvas
+    const canvas = document.getElementById('npCanvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 
     currentlyPlaying = ytId;
 
@@ -1262,26 +1286,117 @@ function playVideo(ytId, el) {
             }
         });
     }
+
+    // Check if audio is already known ready
+    if (audioReady[ytId]) {
+        playAudioFile(audioReady[ytId]);
+        return;
+    }
+
+    // Show preparing status and poll
+    statusEl.textContent = 'Preparing audio...';
+    statusEl.classList.remove('hidden');
+    pollAudio(ytId);
+}
+
+async function pollAudio(ytId) {
+    if (currentlyPlaying !== ytId) return;
+
+    try {
+        const data = await api(`audio.php?id=${ytId}`);
+        if (data.status === 'ready') {
+            audioReady[ytId] = data.url;
+            if (currentlyPlaying === ytId) {
+                document.getElementById('npStatus').classList.add('hidden');
+                playAudioFile(data.url);
+            }
+        } else {
+            document.getElementById('npStatus').textContent = 'Converting...';
+            document.getElementById('npStatus').classList.remove('hidden');
+            setTimeout(() => pollAudio(ytId), 2000);
+        }
+    } catch (e) {
+        document.getElementById('npStatus').textContent = 'Error loading audio';
+        document.getElementById('npStatus').classList.remove('hidden');
+    }
+}
+
+function playAudioFile(url) {
+    initAudioContext();
+    audioEl.src = url;
+    audioEl.play().catch(() => {});
+    startVisualization();
+}
+
+function startVisualization() {
+    const canvas = document.getElementById('npCanvas');
+    const ctx = canvas.getContext('2d');
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function draw() {
+        animFrameId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const barCount = 32;
+        const barWidth = (w / barCount) - 1;
+        const step = Math.max(1, Math.floor(bufferLength / barCount));
+
+        for (let i = 0; i < barCount; i++) {
+            let sum = 0;
+            for (let j = 0; j < step; j++) {
+                sum += dataArray[i * step + j] || 0;
+            }
+            const val = sum / step;
+            const barHeight = (val / 255) * h;
+
+            if (barHeight < 1) continue;
+
+            const gradient = ctx.createLinearGradient(0, h, 0, h - barHeight);
+            gradient.addColorStop(0, '#00b894');
+            gradient.addColorStop(0.5, '#fdcb6e');
+            gradient.addColorStop(1, '#e84393');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(i * (barWidth + 1), h - barHeight, barWidth, barHeight);
+        }
+    }
+    draw();
+}
+
+function togglePlayPause() {
+    if (!audioEl) return;
+    if (audioEl.paused) {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        audioEl.play().catch(() => {});
+        if (analyser) startVisualization();
+    } else {
+        audioEl.pause();
+        if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    }
+}
+
+function seekAudio(e) {
+    if (!audioEl || !audioEl.duration) return;
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audioEl.currentTime = pct * audioEl.duration;
 }
 
 function stopPlayback() {
-    if (ytPlayer) { try { ytPlayer.destroy(); } catch(e) {} ytPlayer = null; }
+    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
     document.getElementById('nowPlaying').classList.remove('active');
-    document.getElementById('npVideo').innerHTML = '';
-    document.getElementById('npViz').classList.remove('playing');
+    document.getElementById('npProgress').style.width = '0%';
+    const canvas = document.getElementById('npCanvas');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
     currentlyPlaying = null;
-}
-
-function generateVizBars(count) {
-    let html = '';
-    for (let i = 0; i < count; i++) {
-        const dur = (0.3 + Math.random() * 0.5).toFixed(2);
-        const delay = (Math.random() * 0.5).toFixed(2);
-        const h = Math.round(30 + Math.random() * 70);
-        html += `<div class="np-viz-bar" style="height:${h}%;animation-duration:${dur}s;animation-delay:${delay}s"></div>`;
-    }
-    return html;
 }
 
 // ===== VIDEO TITLES =====

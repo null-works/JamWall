@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-v4';
+const CACHE_NAME = 'jw-v5';
 const ASSETS = [
     '/',
     '/index.html',
@@ -22,8 +22,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    // Network-first for API calls
-    if (e.request.url.includes('/api/')) {
+    // Network-first for API calls and audio files
+    if (e.request.url.includes('/api/') || e.request.url.includes('/audio/')) {
         e.respondWith(
             fetch(e.request).catch(() =>
                 new Response(JSON.stringify({ error: 'Offline' }), {

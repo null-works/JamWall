@@ -2,7 +2,7 @@
 set -e
 
 # Ensure data directory exists and is writable
-mkdir -p /var/www/data
+mkdir -p /var/www/data /var/www/data/audio
 chown -R www-data:www-data /var/www/data
 
 # Initialize DB if schema exists and DB doesn't

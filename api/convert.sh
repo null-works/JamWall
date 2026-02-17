@@ -15,7 +15,7 @@ mkdir -p "$AUDIO_DIR"
 touch "$LOCK"
 
 /usr/local/bin/yt-dlp \
-    -x --audio-format mp3 --audio-quality 5 \
+    -x --audio-format mp3 --audio-quality 128k \
     --no-playlist --no-warnings \
     -o "$AUDIO_DIR/$YTID.%(ext)s" \
     "https://www.youtube.com/watch?v=$YTID" \

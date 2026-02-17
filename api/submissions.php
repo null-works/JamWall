@@ -136,6 +136,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindValue(5, $comment);
     $stmt->execute();
     
+    // Kick off background audio conversion
+    $scriptPath = __DIR__ . '/convert.sh';
+    $escapedId = escapeshellarg($youtubeId);
+    exec("nohup sh $scriptPath $escapedId > /dev/null 2>&1 &");
+
     jsonResponse(['success' => true, 'youtube_id' => $youtubeId], 201);
 }
 
