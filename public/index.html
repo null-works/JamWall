@@ -155,9 +155,10 @@
             cursor: pointer; transition: all 0.2s; text-align: center;
         }
         .btn-primary {
-            background: var(--accent); color: white;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white;
+            box-shadow: 0 2px 12px var(--accent-glow);
         }
-        .btn-primary:hover { background: #5a4bd4; transform: translateY(-1px); }
+        .btn-primary:hover { background: linear-gradient(135deg, #5a4bd4, #7c4ddb); transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
         .btn-primary:active { transform: translateY(0); }
         .btn-secondary {
             background: var(--bg-card); color: var(--text-primary);
@@ -229,37 +230,119 @@
             font-size: 13px; color: var(--accent);
             font-weight: 600; margin-bottom: 4px;
         }
-        .sub-card-title { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+        .sub-card-title {
+            font-size: 14px; font-weight: 500; margin-bottom: 6px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sub-card-title.loading { color: var(--text-muted); font-size: 12px; }
         .sub-card-comment {
             font-size: 13px; color: var(--text-secondary);
             font-style: italic; margin-bottom: 12px;
         }
 
+        /* === THUMBNAIL CARD === */
+        .sub-card-thumb {
+            position: relative; padding-top: 56.25%;
+            background: #000; cursor: pointer; overflow: hidden;
+        }
+        .sub-card-thumb img {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%; min-height: 100%; object-fit: cover;
+            transition: transform 0.4s, filter 0.4s;
+        }
+        .sub-card-thumb:hover img {
+            transform: translate(-50%, -50%) scale(1.05);
+            filter: brightness(1.1);
+        }
+        .play-overlay {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            transition: background 0.2s;
+        }
+        .sub-card-thumb:hover .play-overlay { background: rgba(0, 0, 0, 0.1); }
+        .play-btn-circle {
+            width: 56px; height: 56px; border-radius: 50%;
+            background: rgba(108, 92, 231, 0.85);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 24px rgba(108, 92, 231, 0.4);
+        }
+        .sub-card-thumb:hover .play-btn-circle {
+            transform: scale(1.12);
+            box-shadow: 0 4px 32px rgba(108, 92, 231, 0.6);
+        }
+        .play-btn-circle svg { width: 22px; height: 22px; fill: white; margin-left: 2px; }
+
+        /* Playing state */
+        .sub-card.playing {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(108, 92, 231, 0.08);
+        }
+
+        /* === VISUALIZER === */
+        .visualizer {
+            display: flex; align-items: flex-end; justify-content: center;
+            gap: 3px; height: 20px; padding: 6px 16px 0;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .sub-card.playing .visualizer { opacity: 1; }
+        .viz-bar {
+            width: 3px; border-radius: 2px;
+            background: linear-gradient(to top, var(--accent), var(--accent-secondary));
+        }
+        .viz-bar:nth-child(1) { animation: vizPulse 0.45s ease-in-out 0s infinite alternate; }
+        .viz-bar:nth-child(2) { animation: vizPulse 0.55s ease-in-out 0.1s infinite alternate; }
+        .viz-bar:nth-child(3) { animation: vizPulse 0.5s ease-in-out 0.2s infinite alternate; }
+        .viz-bar:nth-child(4) { animation: vizPulse 0.6s ease-in-out 0.05s infinite alternate; }
+        .viz-bar:nth-child(5) { animation: vizPulse 0.48s ease-in-out 0.15s infinite alternate; }
+        .viz-bar:nth-child(6) { animation: vizPulse 0.52s ease-in-out 0.25s infinite alternate; }
+        .viz-bar:nth-child(7) { animation: vizPulse 0.58s ease-in-out 0.08s infinite alternate; }
+        @keyframes vizPulse {
+            0% { transform: scaleY(0.3); opacity: 0.6; }
+            100% { transform: scaleY(1); opacity: 1; }
+        }
+
         /* === VOTE CONTROLS === */
         .vote-row {
-            display: flex; align-items: center; gap: 12px;
-            padding: 8px 0;
+            display: flex; align-items: center; gap: 16px;
+            padding: 12px 0 4px;
         }
         .vote-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            background: var(--bg-input); border: 1px solid var(--border);
-            color: var(--text-primary); font-size: 18px; font-weight: 700;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--bg-input); border: 2px solid var(--border);
+            color: var(--text-primary); font-size: 20px; font-weight: 700;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.15s;
+            transition: all 0.2s;
         }
-        .vote-btn:hover { border-color: var(--accent); }
-        .vote-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .vote-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+            transform: scale(1.1);
+        }
+        .vote-btn:active:not(:disabled) { transform: scale(0.95); }
+        .vote-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+        .vote-btn.vote-minus { color: var(--accent-secondary); }
+        .vote-btn.vote-plus { color: var(--accent); }
         .vote-count {
-            font-family: var(--font-mono); font-size: 20px;
-            font-weight: 700; min-width: 30px; text-align: center;
+            font-family: var(--font-mono); font-size: 22px;
+            font-weight: 700; min-width: 36px; text-align: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .vote-points-remaining {
             font-family: var(--font-mono); font-size: 13px;
             color: var(--text-secondary); text-align: center;
-            padding: 12px; margin-bottom: 16px;
-            border: 1px dashed var(--border); border-radius: var(--radius-sm);
+            padding: 14px; margin-bottom: 16px;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: rgba(108, 92, 231, 0.04);
         }
-        .vote-points-remaining strong { color: var(--accent); font-size: 24px; }
+        .vote-points-remaining strong {
+            color: var(--accent); font-size: 24px;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
 
         /* === RESULTS === */
         .result-bar {
@@ -740,11 +823,10 @@ async function openRound(id) {
             if (mySubmission) {
                 html += `
                     <div class="sub-card">
-                        <div class="sub-card-embed">
-                            <iframe src="https://www.youtube.com/embed/${esc(mySubmission.youtube_id)}" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-                        </div>
+                        ${renderThumbnail(mySubmission.youtube_id)}
                         <div class="sub-card-body">
                             <div class="sub-card-player">Your submission</div>
+                            <div class="sub-card-title loading" data-ytid="${esc(mySubmission.youtube_id)}">Loading title...</div>
                             ${mySubmission.comment ? `<div class="sub-card-comment">"${esc(mySubmission.comment)}"</div>` : ''}
                         </div>
                     </div>
@@ -777,17 +859,16 @@ async function openRound(id) {
                 const isOwn = s.player_name === state.player;
                 return `
                     <div class="sub-card" ${isOwn ? 'style="opacity:0.5"' : ''}>
-                        <div class="sub-card-embed">
-                            <iframe src="https://www.youtube.com/embed/${esc(s.youtube_id)}" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-                        </div>
+                        ${renderThumbnail(s.youtube_id)}
                         <div class="sub-card-body">
                             <div class="sub-card-player">${esc(s.player_name)}</div>
+                            <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
                             ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
                             ${isOwn ? '<div style="font-size:12px;color:var(--text-muted)">You can\'t vote for your own</div>' : `
                                 <div class="vote-row">
-                                    <button class="vote-btn" onclick="adjustVote(${s.id}, -1, ${maxPoints})" ${!state.votes[s.id] ? 'disabled' : ''}>−</button>
+                                    <button class="vote-btn vote-minus" onclick="adjustVote(${s.id}, -1, ${maxPoints})" ${!state.votes[s.id] ? 'disabled' : ''}>−</button>
                                     <span class="vote-count" id="vc-${s.id}">${state.votes[s.id] || 0}</span>
-                                    <button class="vote-btn" onclick="adjustVote(${s.id}, 1, ${maxPoints})">+</button>
+                                    <button class="vote-btn vote-plus" onclick="adjustVote(${s.id}, 1, ${maxPoints})">+</button>
                                 </div>
                             `}
                         </div>
@@ -803,14 +884,13 @@ async function openRound(id) {
             
             html += subs.map((s, i) => `
                 <div class="sub-card">
-                    <div class="sub-card-embed">
-                        <iframe src="https://www.youtube.com/embed/${esc(s.youtube_id)}" allowfullscreen allow="autoplay; encrypted-media"></iframe>
-                    </div>
+                    ${renderThumbnail(s.youtube_id)}
                     <div class="sub-card-body">
                         <div class="result-rank">#${i + 1}</div>
                         <div style="display:flex;justify-content:space-between;align-items:center">
-                            <div>
+                            <div style="flex:1;min-width:0">
                                 <div class="sub-card-player">${esc(s.player_name)}</div>
+                                <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
                                 ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
                             </div>
                             <div class="result-points">${s.total_points}</div>
@@ -825,7 +905,8 @@ async function openRound(id) {
         }
         
         container.innerHTML = html;
-        
+        loadVideoTitles();
+
     } catch (e) {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
     }
@@ -926,8 +1007,15 @@ function showSubmitSong() {
         const id = extractYouTubeId(this.value);
         const preview = document.getElementById('songPreview');
         if (id) {
-            preview.innerHTML = `<div class="sub-card-embed"><iframe src="https://www.youtube.com/embed/${id}" allowfullscreen></iframe></div>`;
+            preview.innerHTML = `
+                <div class="sub-card" style="margin:0">
+                    ${renderThumbnail(id)}
+                    <div class="sub-card-body">
+                        <div class="sub-card-title loading" data-ytid="${esc(id)}">Loading title...</div>
+                    </div>
+                </div>`;
             preview.classList.remove('hidden');
+            loadVideoTitles();
         } else {
             preview.classList.add('hidden');
         }
@@ -1049,6 +1137,94 @@ async function loadLeaderboard() {
     } catch (e) {
         container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
     }
+}
+
+// ===== THUMBNAIL & PLAYER =====
+function renderThumbnail(ytId) {
+    return `
+        <div class="sub-card-thumb" onclick="playVideo('${ytId}', this)">
+            <img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" alt="" loading="lazy">
+            <div class="play-overlay">
+                <div class="play-btn-circle">
+                    <svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg>
+                </div>
+            </div>
+        </div>
+        <div class="visualizer">
+            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+            <div class="viz-bar"></div>
+        </div>`;
+}
+
+function playVideo(ytId, el) {
+    const card = el.closest('.sub-card');
+
+    // Stop other playing videos
+    document.querySelectorAll('.sub-card.playing').forEach(c => {
+        if (c === card) return;
+        const embed = c.querySelector('.sub-card-embed');
+        if (embed) {
+            const iframe = embed.querySelector('iframe');
+            const playingId = iframe?.src.match(/embed\/([^?]+)/)?.[1];
+            if (playingId) {
+                embed.outerHTML = renderThumbnail(playingId);
+            }
+        }
+        c.classList.remove('playing');
+    });
+
+    // Replace thumbnail with iframe
+    const thumb = card.querySelector('.sub-card-thumb');
+    const viz = card.querySelector('.visualizer');
+    if (thumb) {
+        thumb.outerHTML = `
+            <div class="sub-card-embed">
+                <iframe src="https://www.youtube.com/embed/${esc(ytId)}?autoplay=1"
+                        allowfullscreen allow="autoplay; encrypted-media"></iframe>
+            </div>`;
+    }
+    if (viz) viz.remove();
+    // Re-add visualizer inside card after embed
+    const embed = card.querySelector('.sub-card-embed');
+    if (embed) {
+        embed.insertAdjacentHTML('afterend',
+            '<div class="visualizer">' +
+            '<div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>' +
+            '<div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>' +
+            '<div class="viz-bar"></div></div>');
+    }
+    card.classList.add('playing');
+}
+
+// ===== VIDEO TITLES =====
+const videoTitleCache = {};
+
+async function fetchVideoTitle(ytId) {
+    if (videoTitleCache[ytId]) return videoTitleCache[ytId];
+    try {
+        const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
+        const data = await res.json();
+        const title = data.title || 'Untitled';
+        videoTitleCache[ytId] = title;
+        return title;
+    } catch {
+        return null;
+    }
+}
+
+async function loadVideoTitles() {
+    const els = document.querySelectorAll('[data-ytid]');
+    const ids = [...new Set([...els].map(el => el.dataset.ytid))];
+    await Promise.all(ids.map(async id => {
+        const title = await fetchVideoTitle(id);
+        if (title) {
+            document.querySelectorAll(`[data-ytid="${id}"]`).forEach(el => {
+                el.textContent = title;
+                el.classList.remove('loading');
+            });
+        }
+    }));
 }
 
 // ===== UTILITIES =====
