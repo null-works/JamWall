@@ -1,0 +1,2 @@
+# JamWall
+Music Competition Application
