@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-v1';
+const CACHE_NAME = 'jw-v2';
 const ASSETS = [
     '/',
     '/index.html',
