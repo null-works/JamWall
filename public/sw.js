@@ -1,14 +1,6 @@
-const CACHE_NAME = 'jw-v9';
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json'
-];
+const CACHE_NAME = 'jw-v10';
 
 self.addEventListener('install', e => {
-    e.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-    );
     self.skipWaiting();
 });
 
@@ -22,19 +14,27 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    // Network-first for API calls and audio files
-    if (e.request.url.includes('/api/') || e.request.url.includes('/audio/')) {
+    const url = new URL(e.request.url);
+
+    // Network-first for API, audio, and HTML (the app itself)
+    // Only cache-first for truly static assets (fonts, icons, manifest)
+    if (e.request.url.includes('/api/') || e.request.url.includes('/audio/') ||
+        e.request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
         e.respondWith(
-            fetch(e.request).catch(() =>
-                new Response(JSON.stringify({ error: 'Offline' }), {
-                    headers: { 'Content-Type': 'application/json' }
-                })
+            fetch(e.request).then(res => {
+                const clone = res.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+                return res;
+            }).catch(() =>
+                caches.match(e.request).then(cached =>
+                    cached || new Response('Offline', { status: 503 })
+                )
             )
         );
         return;
     }
-    
-    // Cache-first for static assets
+
+    // Cache-first only for static assets (icons, manifest, fonts)
     e.respondWith(
         caches.match(e.request).then(cached =>
             cached || fetch(e.request).then(res => {
