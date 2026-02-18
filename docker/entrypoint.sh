@@ -9,7 +9,7 @@ chown -R www-data:www-data /var/www/data
 for mp3 in /var/www/data/audio/*.mp3; do
     [ -f "$mp3" ] || continue
     size=$(stat -c%s "$mp3" 2>/dev/null || echo 0)
-    if [ "$size" -lt 512000 ]; then
+    if [ "$size" -lt 5242880 ]; then
         id=$(basename "$mp3" .mp3)
         echo "Removing broken MP3: $id ($size bytes)"
         rm -f "$mp3" "/var/www/data/audio/$id.err" "/var/www/data/audio/$id.lock"

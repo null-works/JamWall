@@ -20,7 +20,7 @@ $errPath = "$audioDir/$ytId.err";
 // Already converted — but verify the file isn't truncated/empty
 if (file_exists($mp3Path)) {
     $size = filesize($mp3Path);
-    if ($size > 512000) { // > 500KB = likely valid (128kbps * 30s ≈ 480KB)
+    if ($size > 5242880) { // > 5MB = valid
         jsonResponse(['status' => 'ready', 'url' => "/audio/$ytId.mp3"]);
     }
     // Truncated file — delete and reconvert
