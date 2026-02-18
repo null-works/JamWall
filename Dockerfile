@@ -1,7 +1,7 @@
 FROM php:8.3-fpm-alpine
 
-# Install nginx, SQLite, ffmpeg, python3 (for yt-dlp)
-RUN apk add --no-cache nginx sqlite sqlite-dev ffmpeg python3 curl \
+# Install nginx, SQLite, ffmpeg, python3 (for yt-dlp), nodejs (yt-dlp JS runtime)
+RUN apk add --no-cache nginx sqlite sqlite-dev ffmpeg python3 curl nodejs \
     && docker-php-ext-install pdo_sqlite \
     && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp
