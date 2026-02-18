@@ -597,7 +597,7 @@
             <div class="np-controls">
                 <button class="np-btn" id="npPlayPause" onclick="togglePlayPause()">&#9654;</button>
             </div>
-            <canvas class="np-canvas" id="npCanvas" width="120" height="32"></canvas>
+            <canvas class="np-canvas" id="npCanvas" width="150" height="40"></canvas>
             <button class="np-close" onclick="stopPlayback()">&times;</button>
         </div>
     </div>
@@ -1321,8 +1321,8 @@ function initAudioContext() {
     }
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 128;
-    analyser.smoothingTimeConstant = 0.8;
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.75;
     sourceNode = audioCtx.createMediaElementSource(audioEl);
     sourceNode.connect(analyser);
     analyser.connect(audioCtx.destination);
@@ -1340,8 +1340,9 @@ function playTrack(ytId, el) {
         return;
     }
 
-    // Stop current visualization
+    // Stop current visualization and reset peaks
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    vizPeaks = []; vizPrevValues = [];
 
     // Highlight row
     document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
@@ -1432,43 +1433,121 @@ function playAudioFile(url) {
     });
 }
 
+// Peak hold state for Winamp-style falling peaks
+let vizPeaks = [];
+let vizPrevValues = [];
+
 function startVisualization() {
     if (!analyser) return;
     const canvas = document.getElementById('npCanvas');
     const ctx = canvas.getContext('2d');
+
+    // Retina support
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = 150, cssH = 40;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    ctx.scale(dpr, dpr);
+
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
+    const barCount = 28;
+    const gap = 1.5;
+    const barWidth = (cssW - (barCount - 1) * gap) / barCount;
+    const midY = cssH / 2;
+
+    // Init peak/smoothing arrays
+    if (vizPeaks.length !== barCount) {
+        vizPeaks = new Array(barCount).fill(0);
+        vizPrevValues = new Array(barCount).fill(0);
+    }
+
+    // Pre-build gradient for bars (purple → pink, matching app accent)
+    const barGradUp = ctx.createLinearGradient(0, midY, 0, 0);
+    barGradUp.addColorStop(0, '#6c5ce7');
+    barGradUp.addColorStop(0.6, '#a855f7');
+    barGradUp.addColorStop(1, '#e84393');
+    const barGradDown = ctx.createLinearGradient(0, midY, 0, cssH);
+    barGradDown.addColorStop(0, 'rgba(108,92,231,0.5)');
+    barGradDown.addColorStop(1, 'rgba(108,92,231,0.05)');
 
     function draw() {
         animFrameId = requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
 
-        const w = canvas.width;
-        const h = canvas.height;
-        ctx.clearRect(0, 0, w, h);
+        // Clear with slight trail for smoother feel
+        ctx.clearRect(0, 0, cssW, cssH);
 
-        const barCount = 32;
-        const barWidth = (w / barCount) - 1;
+        // Logarithmic frequency grouping (more bins for bass, fewer for treble)
         const step = Math.max(1, Math.floor(bufferLength / barCount));
 
         for (let i = 0; i < barCount; i++) {
-            let sum = 0;
-            for (let j = 0; j < step; j++) {
-                sum += dataArray[i * step + j] || 0;
+            // Weighted average of frequency bins
+            let sum = 0, count = 0;
+            const startBin = Math.floor((i / barCount) * bufferLength * 0.8);
+            const endBin = Math.floor(((i + 1) / barCount) * bufferLength * 0.8);
+            for (let j = startBin; j < endBin && j < bufferLength; j++) {
+                sum += dataArray[j];
+                count++;
             }
-            const val = sum / step;
-            const barHeight = (val / 255) * h;
+            const raw = count > 0 ? sum / count : 0;
 
-            if (barHeight < 1) continue;
+            // Smooth with previous frame (snappy attack, slow decay)
+            const val = raw > vizPrevValues[i]
+                ? raw * 0.7 + vizPrevValues[i] * 0.3
+                : raw * 0.3 + vizPrevValues[i] * 0.7;
+            vizPrevValues[i] = val;
 
-            const gradient = ctx.createLinearGradient(0, h, 0, h - barHeight);
-            gradient.addColorStop(0, '#00b894');
-            gradient.addColorStop(0.5, '#fdcb6e');
-            gradient.addColorStop(1, '#e84393');
+            const norm = val / 255;
+            const barH = norm * (midY - 2);
+            const x = i * (barWidth + gap);
 
-            ctx.fillStyle = gradient;
-            ctx.fillRect(i * (barWidth + 1), h - barHeight, barWidth, barHeight);
+            if (barH < 0.5) {
+                // Tiny idle line
+                ctx.fillStyle = 'rgba(108,92,231,0.3)';
+                ctx.fillRect(x, midY - 0.5, barWidth, 1);
+                // Decay peaks
+                vizPeaks[i] = Math.max(0, vizPeaks[i] - 0.4);
+                continue;
+            }
+
+            // Main bars (mirrored from center — Winamp style)
+            ctx.fillStyle = barGradUp;
+            ctx.fillRect(x, midY - barH, barWidth, barH);
+
+            // Reflection (lower half, faded)
+            ctx.fillStyle = barGradDown;
+            ctx.fillRect(x, midY + 1, barWidth, barH * 0.6);
+
+            // Glow effect on loud bars
+            if (norm > 0.5) {
+                ctx.shadowColor = '#a855f7';
+                ctx.shadowBlur = norm * 8;
+                ctx.fillStyle = 'rgba(168,85,247,0.15)';
+                ctx.fillRect(x, midY - barH, barWidth, barH);
+                ctx.shadowBlur = 0;
+            }
+
+            // Peak indicators (bright dots that fall slowly)
+            if (barH > vizPeaks[i]) {
+                vizPeaks[i] = barH;
+            } else {
+                vizPeaks[i] = Math.max(0, vizPeaks[i] - 0.35);
+            }
+
+            if (vizPeaks[i] > 1) {
+                const peakY = midY - vizPeaks[i];
+                const peakBrightness = 0.6 + (vizPeaks[i] / midY) * 0.4;
+                ctx.fillStyle = `rgba(255,255,255,${peakBrightness})`;
+                ctx.fillRect(x, peakY - 1.5, barWidth, 1.5);
+            }
         }
+
+        // Center line (subtle)
+        ctx.fillStyle = 'rgba(108,92,231,0.2)';
+        ctx.fillRect(0, midY, cssW, 0.5);
     }
     draw();
 }
@@ -1499,6 +1578,7 @@ function seekAudio(e) {
 function stopPlayback() {
     if (audioEl) { audioEl.pause(); audioEl.src = ''; }
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    vizPeaks = []; vizPrevValues = [];
     document.getElementById('nowPlaying').classList.remove('active');
     document.getElementById('npProgress').style.width = '0%';
     const canvas = document.getElementById('npCanvas');
