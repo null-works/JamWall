@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>JamWall</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a26;
+            --bg-card-hover: #22222f;
+            --bg-input: #15151f;
+            --border: #2a2a3a;
+            --border-focus: #6c5ce7;
+            --text-primary: #eeeef0;
+            --text-secondary: #8888a0;
+            --text-muted: #555568;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --accent-secondary: #e84393;
+            --green: #00b894;
+            --orange: #fdcb6e;
+            --red: #d63031;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'Space Mono', monospace;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-display);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* === LAYOUT === */
+        .app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 100;
+            padding: calc(var(--safe-top) + 12px) 20px 12px;
+            background: rgba(10, 10, 15, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .topbar-back { 
+            background: none; border: none; color: var(--text-secondary); 
+            font-size: 20px; cursor: pointer; padding: 4px 8px;
+            display: none;
+        }
+        .topbar-back.visible { display: block; }
+        .topbar h1 {
+            font-size: 18px; font-weight: 700; flex: 1;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .topbar-player {
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-secondary); padding: 4px 10px;
+            border: 1px solid var(--border); border-radius: 20px;
+        }
+
+        .content {
+            flex: 1; padding: 20px 20px calc(var(--safe-bottom) + 130px);
+            max-width: 640px; margin: 0 auto; width: 100%;
+        }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+            padding: 8px 20px calc(var(--safe-bottom) + 8px);
+            background: rgba(10, 10, 15, 0.9);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: center; gap: 8px;
+        }
+        .nav-btn {
+            flex: 1; max-width: 120px;
+            background: none; border: none; color: var(--text-muted);
+            font-family: var(--font-display); font-size: 11px; font-weight: 500;
+            padding: 8px 12px; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            transition: color 0.2s;
+        }
+        .nav-btn svg { width: 22px; height: 22px; }
+        .nav-btn.active { color: var(--accent); }
+
+        /* === SCREENS === */
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.25s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === LOGIN SCREEN === */
+        .login-screen {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 100dvh; padding: 40px 24px;
+            text-align: center;
+        }
+        .login-logo {
+            font-size: 48px; font-weight: 800; letter-spacing: -2px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .login-form {
+            margin-top: 40px;
+            width: 100%; max-width: 320px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        /* === INPUTS === */
+        input[type="text"], input[type="password"], input[type="url"],
+        input[type="datetime-local"], textarea, select {
+            width: 100%; padding: 14px 16px;
+            background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+            font-family: var(--font-display); font-size: 15px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        textarea { resize: vertical; min-height: 80px; }
+        ::placeholder { color: var(--text-muted); }
+
+        /* === BUTTONS === */
+        .btn {
+            padding: 14px 24px; border: none; border-radius: var(--radius-sm);
+            font-family: var(--font-display); font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white;
+            box-shadow: 0 2px 12px var(--accent-glow);
+        }
+        .btn-primary:hover { background: linear-gradient(135deg, #5a4bd4, #7c4ddb); transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary {
+            background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--bg-card-hover); }
+        .btn-danger { background: var(--red); color: white; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* === CARDS === */
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px;
+            margin-bottom: 12px; cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+        .card:hover { background: var(--bg-card-hover); border-color: var(--accent); }
+        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+        .card-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+        .card-meta {
+            display: flex; gap: 16px; font-size: 12px;
+            font-family: var(--font-mono); color: var(--text-muted);
+        }
+
+        /* === PHASE BADGES === */
+        .phase-badge {
+            display: inline-block; padding: 3px 10px;
+            border-radius: 20px; font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .phase-submitting { background: rgba(108, 92, 231, 0.15); color: var(--accent); }
+        .phase-voting { background: rgba(253, 203, 110, 0.15); color: var(--orange); }
+        .phase-results { background: rgba(0, 184, 148, 0.15); color: var(--green); }
+
+        /* === SECTION HEADERS === */
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 22px; font-weight: 700;
+        }
+
+        /* === EMPTY STATE === */
+        .empty-state {
+            text-align: center; padding: 60px 20px;
+            color: var(--text-muted);
+        }
+        .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state-text { font-size: 14px; }
+
+        /* === SUBMISSION ROW === */
+        .sub-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); margin-bottom: 8px;
+            overflow: hidden; transition: background 0.2s, border-color 0.2s;
+        }
+        .sub-card:hover { background: var(--bg-card-hover); }
+        .sub-card.playing {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.06);
+        }
+        .sub-card.own-sub { opacity: 0.5; }
+        .sub-card-row {
+            display: flex; align-items: center;
+            gap: 12px; padding: 10px 14px;
+        }
+        .sub-card-art {
+            width: 48px; height: 48px; border-radius: 6px;
+            overflow: hidden; flex-shrink: 0;
+            position: relative; cursor: pointer;
+        }
+        .sub-card-art img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .sub-card-art .art-play {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .sub-card-art:hover .art-play { opacity: 1; }
+        .sub-card.playing .sub-card-art .art-play {
+            opacity: 1; background: rgba(108, 92, 231, 0.6);
+        }
+        .art-play svg { width: 18px; height: 18px; fill: white; }
+        .sub-card-info { flex: 1; min-width: 0; }
+        .sub-card-title {
+            font-size: 14px; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+        .sub-card-title.loading { color: var(--text-muted); font-size: 12px; }
+        .sub-card-player {
+            font-size: 12px; color: var(--accent); font-weight: 600;
+        }
+        .sub-card-comment {
+            font-size: 11px; color: var(--text-secondary);
+            font-style: italic;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+        .sub-card-details { padding: 0 14px 10px; }
+
+        /* === NOW PLAYING BAR === */
+        .now-playing {
+            position: fixed;
+            bottom: calc(var(--safe-bottom) + 72px);
+            left: 0; right: 0; z-index: 101;
+            background: rgba(12, 12, 18, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--accent);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 -4px 20px rgba(108, 92, 231, 0.15);
+            display: none;
+        }
+        .now-playing.active { display: block; }
+        .np-progress {
+            height: 3px; background: var(--bg-input); cursor: pointer;
+        }
+        .np-progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            transition: width 0.2s linear;
+        }
+        .np-inner {
+            display: flex; align-items: center;
+            gap: 10px; padding: 8px 16px;
+            max-width: 640px; margin: 0 auto;
+        }
+        .np-art {
+            width: 40px; height: 40px; border-radius: 4px;
+            object-fit: cover; flex-shrink: 0;
+        }
+        .np-info { flex: 1; min-width: 0; }
+        .np-title {
+            font-size: 12px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .np-player { font-size: 11px; color: var(--accent); }
+        .np-status {
+            font-size: 10px; color: var(--orange);
+            font-family: var(--font-mono);
+        }
+        .np-controls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .np-btn {
+            background: none; border: none;
+            color: var(--text-secondary); font-size: 18px;
+            cursor: pointer; padding: 4px 6px;
+            transition: color 0.2s;
+        }
+        .np-btn:hover { color: var(--text-primary); }
+        .np-canvas {
+            flex-shrink: 0; border-radius: 2px;
+        }
+        .np-close {
+            background: none; border: none;
+            color: var(--text-muted); font-size: 20px;
+            cursor: pointer; padding: 4px 8px; flex-shrink: 0;
+            transition: color 0.2s;
+        }
+        .np-close:hover { color: var(--text-primary); }
+
+        /* === VOTE CONTROLS (compact) === */
+        .vote-row {
+            display: flex; align-items: center; gap: 6px;
+            flex-shrink: 0;
+        }
+        .vote-btn {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--bg-input); border: 1px solid var(--border);
+            color: var(--text-primary); font-size: 15px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .vote-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+        .vote-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+        .vote-btn.vote-minus { color: var(--accent-secondary); }
+        .vote-btn.vote-plus { color: var(--accent); }
+        .vote-count {
+            font-family: var(--font-mono); font-size: 15px;
+            font-weight: 700; min-width: 20px; text-align: center;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .vote-points-remaining {
+            font-family: var(--font-mono); font-size: 13px;
+            color: var(--text-secondary); text-align: center;
+            padding: 12px; margin-bottom: 12px;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: rgba(108, 92, 231, 0.04);
+        }
+        .vote-points-remaining strong {
+            color: var(--accent); font-size: 20px;
+            text-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* === RESULTS === */
+        .result-rank {
+            font-family: var(--font-mono); font-size: 14px;
+            font-weight: 700; color: var(--text-muted);
+            min-width: 28px; flex-shrink: 0; text-align: center;
+        }
+        .result-rank-1 { color: #ffd700; }
+        .result-rank-2 { color: #c0c0c0; }
+        .result-rank-3 { color: #cd7f32; }
+        .result-points {
+            font-family: var(--font-mono); font-size: 16px;
+            font-weight: 700; color: var(--accent); flex-shrink: 0;
+        }
+        .result-bar {
+            height: 4px; background: var(--bg-input);
+            border-radius: 2px; overflow: hidden;
+        }
+        .result-bar-fill {
+            height: 100%; border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+            transition: width 0.6s ease;
+        }
+
+        /* === LEADERBOARD === */
+        .lb-row {
+            display: flex; align-items: center; gap: 16px;
+            padding: 16px 20px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            margin-bottom: 8px;
+        }
+        .lb-rank {
+            font-family: var(--font-mono); font-size: 20px;
+            font-weight: 700; color: var(--text-muted);
+            min-width: 30px;
+        }
+        .lb-rank-1 { color: #ffd700; }
+        .lb-rank-2 { color: #c0c0c0; }
+        .lb-rank-3 { color: #cd7f32; }
+        .lb-name { flex: 1; font-weight: 600; font-size: 16px; }
+        .lb-points {
+            font-family: var(--font-mono); font-size: 18px;
+            font-weight: 700; color: var(--accent);
+        }
+        .lb-meta { font-size: 11px; color: var(--text-muted); }
+
+        /* === MODAL === */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            display: none; align-items: flex-end; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-secondary); border-radius: 20px 20px 0 0;
+            width: 100%; max-width: 640px;
+            max-height: 85dvh; overflow-y: auto;
+            padding: 24px 20px calc(var(--safe-bottom) + 24px);
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-handle {
+            width: 40px; height: 4px; border-radius: 2px;
+            background: var(--border); margin: 0 auto 20px;
+        }
+        .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block; font-size: 13px; font-weight: 500;
+            color: var(--text-secondary); margin-bottom: 6px;
+        }
+        .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* === COMMENTS SECTION === */
+        .comments-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .comment-item {
+            padding: 8px 0; font-size: 13px;
+        }
+        .comment-author { font-weight: 600; color: var(--accent); }
+        .comment-text { color: var(--text-secondary); margin-top: 2px; }
+        .comment-input-row { display: flex; gap: 8px; margin-top: 8px; }
+        .comment-input-row input { flex: 1; padding: 10px 12px; font-size: 13px; }
+
+        /* === TOAST === */
+        .toast-container {
+            position: fixed; top: calc(var(--safe-top) + 70px);
+            left: 50%; transform: translateX(-50%); z-index: 300;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .toast {
+            padding: 12px 20px; border-radius: var(--radius-sm);
+            font-size: 14px; font-weight: 500;
+            background: var(--bg-card); border: 1px solid var(--border);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+            animation: toastIn 0.3s ease;
+            white-space: nowrap;
+        }
+        .toast-error { border-color: var(--red); color: var(--red); }
+        .toast-success { border-color: var(--green); color: var(--green); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === COUNTDOWN === */
+        .countdown {
+            font-family: var(--font-mono); font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* === LOADING === */
+        .spinner {
+            width: 24px; height: 24px; border: 2px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 40px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* === HIDDEN UTILITY === */
+        .hidden { display: none !important; }
+
+        /* === DEBUG TAB === */
+        .debug-entry {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px;
+            margin-bottom: 8px; font-size: 13px;
+        }
+        .debug-entry-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px;
+        }
+        .debug-id {
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .debug-status {
+            display: inline-block; padding: 2px 8px;
+            border-radius: 10px; font-size: 11px; font-weight: 600;
+            text-transform: uppercase;
+        }
+        .debug-status-ready { background: rgba(0,184,148,0.15); color: var(--green); }
+        .debug-status-converting { background: rgba(253,203,110,0.15); color: var(--orange); }
+        .debug-status-failed { background: rgba(214,48,49,0.15); color: var(--red); }
+        .debug-status-stale_lock { background: rgba(214,48,49,0.15); color: var(--red); }
+        .debug-meta {
+            font-family: var(--font-mono); font-size: 11px;
+            color: var(--text-muted); margin-bottom: 6px;
+        }
+        .debug-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .debug-log {
+            margin-top: 10px; padding: 10px;
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: var(--font-mono); font-size: 11px;
+            color: var(--text-secondary); white-space: pre-wrap;
+            word-break: break-all; max-height: 300px; overflow-y: auto;
+        }
+        .debug-disk {
+            font-family: var(--font-mono); font-size: 12px;
+            color: var(--text-muted); text-align: center;
+            padding: 8px; margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="loginScreen" class="login-screen">
+    <div class="login-logo">JAM<br>WALL</div>
+    <div class="login-form">
+        <input type="password" id="passwordInput" placeholder="Enter league password" autocomplete="off">
+        <input type="text" id="nameInput" placeholder="Your display name" maxlength="20" autocomplete="off" class="hidden">
+        <button class="btn btn-primary" id="loginBtn" onclick="handleLogin()">Enter</button>
+    </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp" class="app hidden">
+    <div class="topbar">
+        <button class="topbar-back" id="backBtn" onclick="goBack()">←</button>
+        <h1 id="topbarTitle">JamWall</h1>
+        <div class="topbar-player" id="topbarPlayer"></div>
+    </div>
+
+    <div class="content">
+        <!-- ROUNDS LIST -->
+        <div id="roundsScreen" class="screen active">
+            <div class="section-header">
+                <span class="section-title">Rounds</span>
+                <button class="btn btn-primary btn-sm" onclick="showCreateRound()">+ New Round</button>
+            </div>
+            <div id="roundsList"></div>
+        </div>
+
+        <!-- ROUND DETAIL -->
+        <div id="roundDetail" class="screen">
+            <div id="roundDetailContent"></div>
+        </div>
+
+        <!-- LEADERBOARD -->
+        <div id="leaderboardScreen" class="screen">
+            <div class="section-header">
+                <span class="section-title">Leaderboard</span>
+            </div>
+            <div id="leaderboardContent"></div>
+        </div>
+
+        <!-- DEBUG -->
+        <div id="debugScreen" class="screen">
+            <div class="section-header">
+                <span class="section-title">Debug</span>
+                <div style="display:flex;gap:6px">
+                    <button class="btn btn-secondary btn-sm" onclick="loadDebug()">Refresh</button>
+                    <button class="btn btn-danger btn-sm" onclick="retryAll()">Retry All</button>
+                </div>
+            </div>
+            <div id="debugContent"></div>
+        </div>
+    </div>
+
+    <div id="nowPlaying" class="now-playing">
+        <div class="np-progress" onclick="seekAudio(event)">
+            <div class="np-progress-fill" id="npProgress"></div>
+        </div>
+        <div class="np-inner">
+            <img class="np-art" id="npArt" src="" alt="">
+            <div class="np-info">
+                <div class="np-title" id="npTitle">Now Playing</div>
+                <div class="np-player" id="npPlayer"></div>
+                <div class="np-status hidden" id="npStatus"></div>
+            </div>
+            <div class="np-controls">
+                <button class="np-btn" id="npPlayPause" onclick="togglePlayPause()">&#9654;</button>
+            </div>
+            <canvas class="np-canvas" id="npCanvas" width="120" height="32"></canvas>
+            <button class="np-close" onclick="stopPlayback()">&times;</button>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-btn active" data-screen="rounds" onclick="switchTab('rounds')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            Rounds
+        </button>
+        <button class="nav-btn" data-screen="leaderboard" onclick="switchTab('leaderboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21V11M16 21V7M12 21V3"/><path d="M3 21h18"/></svg>
+            Standings
+        </button>
+        <button class="nav-btn" data-screen="debug" onclick="switchTab('debug')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h.01"/><path d="M8 16V8a4 4 0 018 0v8"/><path d="M4 12h2M18 12h2"/><path d="M6 8l1.5 1.5M16.5 9.5L18 8"/><path d="M6 16l1.5-1.5M16.5 14.5L18 16"/></svg>
+            Debug
+        </button>
+    </div>
+</div>
+
+<!-- ===== CREATE ROUND MODAL ===== -->
+<div class="modal-overlay" id="createRoundModal">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">New Round</div>
+        <div class="form-group">
+            <label class="form-label">Theme / Title</label>
+            <input type="text" id="roundTitle" placeholder="e.g. Songs for a road trip">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description (optional)</label>
+            <textarea id="roundDesc" placeholder="Any extra context for the round..."></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Submissions close</label>
+            <input type="datetime-local" id="roundSubDeadline">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Voting closes</label>
+            <input type="datetime-local" id="roundVoteDeadline">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Points per voter</label>
+            <input type="text" id="roundPoints" value="10" inputmode="numeric">
+            <div class="form-hint">Each player distributes this many points across submissions</div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:24px">
+            <button class="btn btn-secondary" style="flex:1" onclick="closeModal('createRoundModal')">Cancel</button>
+            <button class="btn btn-primary" style="flex:1" onclick="createRound()">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SUBMIT SONG MODAL ===== -->
+<div class="modal-overlay" id="submitSongModal">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Submit Your Song</div>
+        <div class="form-group">
+            <label class="form-label">YouTube URL</label>
+            <input type="url" id="songUrl" placeholder="https://youtube.com/watch?v=...">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Comment (optional)</label>
+            <textarea id="songComment" placeholder="Why did you pick this song?"></textarea>
+        </div>
+        <div id="songPreview" class="hidden" style="margin-bottom:16px"></div>
+        <div style="display:flex;gap:12px;margin-top:24px">
+            <button class="btn btn-secondary" style="flex:1" onclick="closeModal('submitSongModal')">Cancel</button>
+            <button class="btn btn-primary" style="flex:1" onclick="submitSong()">Submit</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+// ===== STATE =====
+let state = {
+    password: '',
+    player: '',
+    currentRound: null,
+    votes: {},        // { submissionId: points }
+    screen: 'rounds',
+    history: []
+};
+
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? '/api' : '/api';
+
+// ===== API HELPERS =====
+async function api(endpoint, method = 'GET', body = null) {
+    const opts = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Password': state.password,
+            'X-Player': state.player
+        }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    
+    const res = await fetch(`${API}/${endpoint}`, opts);
+    const data = await res.json();
+    
+    if (!res.ok) {
+        throw new Error(data.error || 'Request failed');
+    }
+    return data;
+}
+
+// ===== AUTH =====
+function handleLogin() {
+    const pwInput = document.getElementById('passwordInput');
+    const nameInput = document.getElementById('nameInput');
+    
+    if (nameInput.classList.contains('hidden')) {
+        // Step 1: Validate password
+        const pw = pwInput.value.trim();
+        if (!pw) { toast('Enter the password', 'error'); return; }
+        
+        state.password = pw;
+        
+        // Test password
+        fetch(`${API}/auth.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                toast('Wrong password', 'error');
+                state.password = '';
+                return;
+            }
+            // Password OK — ask for name
+            pwInput.classList.add('hidden');
+            nameInput.classList.remove('hidden');
+            nameInput.focus();
+            document.getElementById('loginBtn').textContent = 'Join';
+            
+            // Restore name from session
+            const saved = sessionStorage.getItem('jw_player');
+            if (saved) nameInput.value = saved;
+        })
+        .catch(() => toast('Connection error', 'error'));
+        return;
+    }
+    
+    // Step 2: Set name
+    const name = nameInput.value.trim();
+    if (!name) { toast('Pick a display name', 'error'); return; }
+    if (name.length > 20) { toast('Name too long (max 20 chars)', 'error'); return; }
+    
+    state.player = name;
+    sessionStorage.setItem('jw_password', state.password);
+    sessionStorage.setItem('jw_player', state.player);
+    
+    // Enter app
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('topbarPlayer').textContent = state.player;
+    
+    loadRounds();
+}
+
+// Restore session on load
+(function restoreSession() {
+    const pw = sessionStorage.getItem('jw_password');
+    const player = sessionStorage.getItem('jw_player');
+    if (pw && player) {
+        state.password = pw;
+        state.player = player;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        document.getElementById('topbarPlayer').textContent = state.player;
+        loadRounds();
+    }
+    
+    // Enter key support
+    document.getElementById('passwordInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('nameInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleLogin();
+    });
+})();
+
+// ===== NAVIGATION =====
+function switchTab(tab) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+    const screenMap = { rounds: 'roundsScreen', leaderboard: 'leaderboardScreen', debug: 'debugScreen' };
+    const titleMap = { rounds: 'JamWall', leaderboard: 'Standings', debug: 'Debug' };
+    document.getElementById(screenMap[tab]).classList.add('active');
+
+    document.querySelector(`[data-screen="${tab}"]`).classList.add('active');
+    document.getElementById('backBtn').classList.remove('visible');
+    document.getElementById('topbarTitle').textContent = titleMap[tab] || 'JamWall';
+
+    state.screen = tab;
+    state.history = [];
+    if (tab !== 'debug') stopPlayback();
+
+    if (tab === 'leaderboard') loadLeaderboard();
+    if (tab === 'rounds') loadRounds();
+    if (tab === 'debug') loadDebug();
+}
+
+function goBack() {
+    stopPlayback();
+    document.getElementById('roundDetail').classList.remove('active');
+    document.getElementById('roundsScreen').classList.add('active');
+    document.getElementById('backBtn').classList.remove('visible');
+    document.getElementById('topbarTitle').textContent = 'JamWall';
+    state.currentRound = null;
+}
+
+// ===== ROUNDS =====
+async function loadRounds() {
+    const container = document.getElementById('roundsList');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const rounds = await api('rounds.php');
+        
+        if (rounds.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎵</div>
+                    <div class="empty-state-text">No rounds yet — create one to get started!</div>
+                </div>`;
+            return;
+        }
+        
+        container.innerHTML = rounds.map(r => `
+            <div class="card" onclick="openRound(${r.id})">
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+                    <span class="phase-badge phase-${r.phase}">${r.phase}</span>
+                    <span class="countdown">${getCountdown(r)}</span>
+                </div>
+                <div class="card-title">${esc(r.title)}</div>
+                ${r.description ? `<div class="card-desc">${esc(r.description)}</div>` : ''}
+                <div class="card-meta">
+                    <span>🎵 ${r.submission_count} submissions</span>
+                    <span>🗳️ ${r.voter_count} voted</span>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
+    }
+}
+
+function getCountdown(round) {
+    const now = new Date();
+    let target, label;
+    
+    if (round.phase === 'submitting') {
+        target = new Date(round.submission_deadline);
+        label = 'Submit by';
+    } else if (round.phase === 'voting') {
+        target = new Date(round.voting_deadline);
+        label = 'Vote by';
+    } else {
+        return 'Complete';
+    }
+    
+    const diff = target - now;
+    if (diff < 0) return 'Ended';
+    
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    
+    if (days > 0) return `${label} ${days}d ${hours}h`;
+    if (hours > 0) return `${label} ${hours}h ${mins}m`;
+    return `${label} ${mins}m`;
+}
+
+// ===== ROUND DETAIL =====
+async function openRound(id) {
+    state.currentRound = id;
+    
+    document.getElementById('roundsScreen').classList.remove('active');
+    document.getElementById('roundDetail').classList.add('active');
+    document.getElementById('backBtn').classList.add('visible');
+    
+    const container = document.getElementById('roundDetailContent');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const data = await api(`submissions.php?round_id=${id}`);
+        const round = data.round;
+        const phase = data.phase;
+        const subs = data.submissions;
+        
+        document.getElementById('topbarTitle').textContent = round.title;
+        
+        let html = '';
+        
+        // Round info
+        html += `
+            <div style="margin-bottom:24px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <span class="phase-badge phase-${phase}">${phase}</span>
+                    <span class="countdown">${getCountdown({...round, phase})}</span>
+                </div>
+                ${round.description ? `<p style="color:var(--text-secondary);font-size:14px;margin-top:8px">${esc(round.description)}</p>` : ''}
+            </div>
+        `;
+        
+        // Phase-specific UI
+        if (phase === 'submitting') {
+            const mySubmission = subs.find(s => s.player_name === state.player);
+            html += `
+                <button class="btn btn-primary" style="width:100%;margin-bottom:24px" onclick="showSubmitSong()">
+                    ${mySubmission ? '🔄 Change Your Submission' : '🎵 Submit a Song'}
+                </button>
+            `;
+            if (mySubmission) {
+                html += `
+                    <div class="sub-card" data-player="Your submission">
+                        <div class="sub-card-row">
+                            <div class="sub-card-art" onclick="playTrack('${esc(mySubmission.youtube_id)}', this)">
+                                <img src="https://img.youtube.com/vi/${esc(mySubmission.youtube_id)}/hqdefault.jpg" alt="">
+                                <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
+                            </div>
+                            <div class="sub-card-info">
+                                <div class="sub-card-title loading" data-ytid="${esc(mySubmission.youtube_id)}">Loading title...</div>
+                                <div class="sub-card-player">Your submission</div>
+                                ${mySubmission.comment ? `<div class="sub-card-comment">"${esc(mySubmission.comment)}"</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            html += `<p style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:16px">${subs.length} submission${subs.length !== 1 ? 's' : ''} so far</p>`;
+        }
+        
+        else if (phase === 'voting') {
+            // Init vote state
+            state.votes = {};
+            const maxPoints = round.vote_points;
+            
+            // Check for existing votes
+            subs.forEach(s => {
+                const myVote = s.votes.find(v => v.voter_name === state.player);
+                if (myVote) state.votes[s.id] = myVote.points;
+            });
+            
+            html += `
+                <div class="vote-points-remaining">
+                    Points remaining: <strong id="voteRemaining">${maxPoints - Object.values(state.votes).reduce((a,b) => a+b, 0)}</strong> / ${maxPoints}
+                </div>
+            `;
+            
+            // Shuffle submissions for fairness (seeded by round id)
+            const shuffled = [...subs].sort(() => 0.5 - seededRandom(id));
+            
+            html += shuffled.map(s => {
+                const isOwn = s.player_name === state.player;
+                return `
+                    <div class="sub-card ${isOwn ? 'own-sub' : ''}" data-player="${esc(s.player_name)}">
+                        <div class="sub-card-row">
+                            <div class="sub-card-art" onclick="playTrack('${esc(s.youtube_id)}', this)">
+                                <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
+                                <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
+                            </div>
+                            <div class="sub-card-info">
+                                <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
+                                <div class="sub-card-player">${esc(s.player_name)}</div>
+                                ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
+                            </div>
+                            ${isOwn ? '' : `
+                                <div class="vote-row">
+                                    <button class="vote-btn vote-minus" onclick="adjustVote(${s.id}, -1, ${maxPoints})" ${!state.votes[s.id] ? 'disabled' : ''}>−</button>
+                                    <span class="vote-count" id="vc-${s.id}">${state.votes[s.id] || 0}</span>
+                                    <button class="vote-btn vote-plus" onclick="adjustVote(${s.id}, 1, ${maxPoints})">+</button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            html += `<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="submitVotes()">Submit Votes</button>`;
+        }
+        
+        else if (phase === 'results') {
+            const maxPoints = subs.length > 0 ? Math.max(...subs.map(s => s.total_points), 1) : 1;
+            
+            html += subs.map((s, i) => `
+                <div class="sub-card" data-player="${esc(s.player_name)}">
+                    <div class="sub-card-row">
+                        <div class="result-rank ${i < 3 ? 'result-rank-' + (i + 1) : ''}">#${i + 1}</div>
+                        <div class="sub-card-art" onclick="playTrack('${esc(s.youtube_id)}', this)">
+                            <img src="https://img.youtube.com/vi/${esc(s.youtube_id)}/hqdefault.jpg" alt="">
+                            <div class="art-play"><svg viewBox="0 0 24 24"><polygon points="6,3 20,12 6,21"/></svg></div>
+                        </div>
+                        <div class="sub-card-info">
+                            <div class="sub-card-title loading" data-ytid="${esc(s.youtube_id)}">Loading title...</div>
+                            <div class="sub-card-player">${esc(s.player_name)}</div>
+                            ${s.comment ? `<div class="sub-card-comment">"${esc(s.comment)}"</div>` : ''}
+                        </div>
+                        <div class="result-points">${s.total_points}</div>
+                    </div>
+                    <div class="sub-card-details">
+                        <div class="result-bar">
+                            <div class="result-bar-fill" style="width:${(s.total_points / maxPoints) * 100}%"></div>
+                        </div>
+                        ${renderComments(s)}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        container.innerHTML = html;
+        loadVideoTitles();
+
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
+    }
+}
+
+// ===== VOTING =====
+function adjustVote(subId, delta, maxPoints) {
+    const current = state.votes[subId] || 0;
+    const newVal = current + delta;
+    
+    if (newVal < 0) return;
+    
+    const totalUsed = Object.entries(state.votes)
+        .filter(([id]) => parseInt(id) !== subId)
+        .reduce((sum, [, pts]) => sum + pts, 0);
+    
+    if (totalUsed + newVal > maxPoints) {
+        toast('No points remaining!', 'error');
+        return;
+    }
+    
+    state.votes[subId] = newVal;
+    
+    document.getElementById(`vc-${subId}`).textContent = newVal;
+    document.getElementById('voteRemaining').textContent = maxPoints - totalUsed - newVal;
+    
+    // Update button states
+    const minusBtn = document.querySelector(`[onclick="adjustVote(${subId}, -1, ${maxPoints})"]`);
+    if (minusBtn) minusBtn.disabled = newVal <= 0;
+}
+
+async function submitVotes() {
+    const votes = Object.entries(state.votes)
+        .filter(([, pts]) => pts > 0)
+        .map(([id, pts]) => ({ submission_id: parseInt(id), points: pts }));
+    
+    if (votes.length === 0) {
+        toast('Distribute some points first!', 'error');
+        return;
+    }
+    
+    try {
+        await api('votes.php', 'POST', {
+            round_id: state.currentRound,
+            votes
+        });
+        toast('Votes submitted! 🗳️', 'success');
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+// ===== COMMENTS =====
+function renderComments(submission) {
+    const comments = submission.comments || [];
+    return `
+        <div class="comments-section">
+            ${comments.map(c => `
+                <div class="comment-item">
+                    <span class="comment-author">${esc(c.player_name)}</span>
+                    <div class="comment-text">${esc(c.comment)}</div>
+                </div>
+            `).join('')}
+            <div class="comment-input-row">
+                <input type="text" id="comment-${submission.id}" placeholder="Add a comment...">
+                <button class="btn btn-sm btn-secondary" onclick="postComment(${submission.id})">Post</button>
+            </div>
+        </div>
+    `;
+}
+
+async function postComment(subId) {
+    const input = document.getElementById(`comment-${subId}`);
+    const text = input.value.trim();
+    if (!text) return;
+    
+    try {
+        await api('comments.php', 'POST', {
+            submission_id: subId,
+            comment: text
+        });
+        input.value = '';
+        openRound(state.currentRound); // Refresh
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+// ===== SUBMISSION =====
+function showSubmitSong() {
+    openModal('submitSongModal');
+    document.getElementById('songUrl').value = '';
+    document.getElementById('songComment').value = '';
+    document.getElementById('songPreview').classList.add('hidden');
+    
+    // Live preview
+    document.getElementById('songUrl').addEventListener('input', function() {
+        const id = extractYouTubeId(this.value);
+        const preview = document.getElementById('songPreview');
+        if (id) {
+            preview.innerHTML = `
+                <div class="sub-card" style="margin:0">
+                    <div class="sub-card-row">
+                        <div class="sub-card-art">
+                            <img src="https://img.youtube.com/vi/${esc(id)}/hqdefault.jpg" alt="">
+                        </div>
+                        <div class="sub-card-info">
+                            <div class="sub-card-title loading" data-ytid="${esc(id)}">Loading title...</div>
+                        </div>
+                    </div>
+                </div>`;
+            preview.classList.remove('hidden');
+            loadVideoTitles();
+        } else {
+            preview.classList.add('hidden');
+        }
+    });
+}
+
+async function submitSong() {
+    const url = document.getElementById('songUrl').value.trim();
+    const comment = document.getElementById('songComment').value.trim();
+    
+    if (!url) { toast('Paste a YouTube URL', 'error'); return; }
+    
+    const ytId = extractYouTubeId(url);
+    if (!ytId) { toast('Invalid YouTube URL', 'error'); return; }
+    
+    try {
+        await api('submissions.php', 'POST', {
+            round_id: state.currentRound,
+            youtube_url: url,
+            comment
+        });
+        closeModal('submitSongModal');
+        toast('Song submitted! 🎵', 'success');
+        openRound(state.currentRound);
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+// ===== CREATE ROUND =====
+function showCreateRound() {
+    openModal('createRoundModal');
+    
+    // Default deadlines: submissions close in 2 days, voting in 4 days
+    const now = new Date();
+    const subDeadline = new Date(now.getTime() + 2 * 86400000);
+    const voteDeadline = new Date(now.getTime() + 4 * 86400000);
+    
+    document.getElementById('roundSubDeadline').value = toLocalISO(subDeadline);
+    document.getElementById('roundVoteDeadline').value = toLocalISO(voteDeadline);
+    document.getElementById('roundTitle').value = '';
+    document.getElementById('roundDesc').value = '';
+    document.getElementById('roundPoints').value = '10';
+}
+
+async function createRound() {
+    const title = document.getElementById('roundTitle').value.trim();
+    const desc = document.getElementById('roundDesc').value.trim();
+    const subDeadline = document.getElementById('roundSubDeadline').value;
+    const voteDeadline = document.getElementById('roundVoteDeadline').value;
+    const points = parseInt(document.getElementById('roundPoints').value) || 10;
+    
+    if (!title) { toast('Give it a theme!', 'error'); return; }
+    if (!subDeadline || !voteDeadline) { toast('Set both deadlines', 'error'); return; }
+    
+    try {
+        await api('rounds.php', 'POST', {
+            title,
+            description: desc,
+            submission_deadline: new Date(subDeadline).toISOString(),
+            voting_deadline: new Date(voteDeadline).toISOString(),
+            vote_points: points
+        });
+        closeModal('createRoundModal');
+        toast('Round created! 🎉', 'success');
+        loadRounds();
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+// ===== LEADERBOARD =====
+async function loadLeaderboard() {
+    const container = document.getElementById('leaderboardContent');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const data = await api('leaderboard.php');
+        
+        if (data.leaderboard.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏆</div>
+                    <div class="empty-state-text">Complete a round to see standings</div>
+                </div>`;
+            return;
+        }
+        
+        let html = data.leaderboard.map(p => `
+            <div class="lb-row">
+                <div class="lb-rank ${p.rank <= 3 ? 'lb-rank-' + p.rank : ''}">#${p.rank}</div>
+                <div class="lb-name">
+                    ${esc(p.player_name)}
+                    <div class="lb-meta">${p.rounds_played} round${p.rounds_played !== 1 ? 's' : ''} played</div>
+                </div>
+                <div class="lb-points">${p.total_points} pts</div>
+            </div>
+        `).join('');
+        
+        // Round-by-round results
+        if (data.round_results.length > 0) {
+            html += `<div class="section-title" style="margin-top:32px;margin-bottom:16px;font-size:18px">Round Results</div>`;
+            html += data.round_results.map(rr => `
+                <div class="card" style="cursor:default">
+                    <div class="card-title">${esc(rr.round.title)}</div>
+                    <div style="margin-top:8px">
+                        ${rr.results.map((s, i) => `
+                            <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;${i === 0 ? 'font-weight:600' : ''}">
+                                <span>${i === 0 ? '🏆 ' : ''}${esc(s.player_name)}</span>
+                                <span style="font-family:var(--font-mono);color:var(--accent)">${s.points}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
+    }
+}
+
+// ===== AUDIO PLAYER (Web Audio API) =====
+let currentlyPlaying = null;
+let audioEl = null;
+let audioCtx = null;
+let analyser = null;
+let sourceNode = null;
+let animFrameId = null;
+let audioReady = {}; // { ytId: url } — cache of ready audio URLs
+
+function initAudio() {
+    if (audioEl) return;
+    audioEl = new Audio();
+    // No crossOrigin needed — audio is same-origin, and setting it
+    // forces a CORS preflight that fails if server headers are missing
+    audioEl.addEventListener('ended', () => stopPlayback());
+    audioEl.addEventListener('timeupdate', () => {
+        if (audioEl.duration) {
+            const pct = (audioEl.currentTime / audioEl.duration) * 100;
+            document.getElementById('npProgress').style.width = pct + '%';
+        }
+    });
+    audioEl.addEventListener('play', () => {
+        document.getElementById('npPlayPause').innerHTML = '&#9646;&#9646;';
+        showNpStatus('');
+    });
+    audioEl.addEventListener('pause', () => {
+        document.getElementById('npPlayPause').innerHTML = '&#9654;';
+    });
+    audioEl.addEventListener('error', () => {
+        const err = audioEl.error;
+        const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+        const msg = `Audio error: ${codes[err?.code] || err?.code || 'unknown'} — ${err?.message || 'no details'}`;
+        console.error(msg, err);
+        showNpStatus(msg);
+    });
+    audioEl.addEventListener('stalled', () => {
+        console.warn('Audio stalled');
+        showNpStatus('Audio stalled — buffering...');
+    });
+    audioEl.addEventListener('waiting', () => {
+        showNpStatus('Buffering...');
+    });
+    audioEl.addEventListener('canplay', () => {
+        if (!audioEl.paused) showNpStatus('');
+    });
+}
+
+function showNpStatus(msg) {
+    const el = document.getElementById('npStatus');
+    if (msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+function initAudioContext() {
+    if (audioCtx) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = 0.8;
+    sourceNode = audioCtx.createMediaElementSource(audioEl);
+    sourceNode.connect(analyser);
+    analyser.connect(audioCtx.destination);
+}
+
+function playTrack(ytId, el) {
+    initAudio();
+
+    const card = el?.closest('.sub-card');
+    const playerName = card?.dataset?.player || '';
+
+    // If same track, toggle play/pause
+    if (currentlyPlaying === ytId && audioEl.src) {
+        togglePlayPause();
+        return;
+    }
+
+    // Stop current visualization
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
+    // Highlight row
+    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
+    if (card) card.classList.add('playing');
+
+    // Show now-playing bar
+    document.getElementById('nowPlaying').classList.add('active');
+    document.getElementById('npProgress').style.width = '0%';
+
+    // Set info
+    document.getElementById('npTitle').textContent = videoTitleCache[ytId] || 'Loading...';
+    document.getElementById('npPlayer').textContent = playerName;
+    document.getElementById('npArt').src = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+
+    // Clear status
+    const statusEl = document.getElementById('npStatus');
+    statusEl.classList.add('hidden');
+    statusEl.textContent = '';
+
+    // Clear canvas
+    const canvas = document.getElementById('npCanvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+
+    currentlyPlaying = ytId;
+
+    // Fetch title if not cached
+    if (!videoTitleCache[ytId]) {
+        fetchVideoTitle(ytId).then(t => {
+            if (t && currentlyPlaying === ytId) {
+                document.getElementById('npTitle').textContent = t;
+            }
+        });
+    }
+
+    // Check if audio is already known ready
+    if (audioReady[ytId]) {
+        playAudioFile(audioReady[ytId]);
+        return;
+    }
+
+    // Show preparing status and poll
+    statusEl.textContent = 'Preparing audio...';
+    statusEl.classList.remove('hidden');
+    pollAudio(ytId);
+}
+
+async function pollAudio(ytId) {
+    if (currentlyPlaying !== ytId) return;
+
+    try {
+        const data = await api(`audio.php?id=${ytId}`);
+        if (data.status === 'ready') {
+            audioReady[ytId] = data.url;
+            if (currentlyPlaying === ytId) {
+                document.getElementById('npStatus').classList.add('hidden');
+                playAudioFile(data.url);
+            }
+        } else if (data.status === 'failed') {
+            document.getElementById('npStatus').textContent = 'Conversion failed — check Debug tab';
+            document.getElementById('npStatus').classList.remove('hidden');
+        } else {
+            document.getElementById('npStatus').textContent = 'Converting...';
+            document.getElementById('npStatus').classList.remove('hidden');
+            setTimeout(() => pollAudio(ytId), 2000);
+        }
+    } catch (e) {
+        document.getElementById('npStatus').textContent = 'Error loading audio';
+        document.getElementById('npStatus').classList.remove('hidden');
+    }
+}
+
+function playAudioFile(url) {
+    initAudioContext();
+    console.log('[JamWall] Playing audio:', url);
+    audioEl.src = url;
+    audioEl.load();
+    audioEl.play().then(() => {
+        console.log('[JamWall] Playback started, duration:', audioEl.duration);
+    }).catch(err => {
+        console.error('[JamWall] Play failed:', err);
+        showNpStatus('Play failed: ' + err.message);
+    });
+    startVisualization();
+}
+
+function startVisualization() {
+    const canvas = document.getElementById('npCanvas');
+    const ctx = canvas.getContext('2d');
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    function draw() {
+        animFrameId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const barCount = 32;
+        const barWidth = (w / barCount) - 1;
+        const step = Math.max(1, Math.floor(bufferLength / barCount));
+
+        for (let i = 0; i < barCount; i++) {
+            let sum = 0;
+            for (let j = 0; j < step; j++) {
+                sum += dataArray[i * step + j] || 0;
+            }
+            const val = sum / step;
+            const barHeight = (val / 255) * h;
+
+            if (barHeight < 1) continue;
+
+            const gradient = ctx.createLinearGradient(0, h, 0, h - barHeight);
+            gradient.addColorStop(0, '#00b894');
+            gradient.addColorStop(0.5, '#fdcb6e');
+            gradient.addColorStop(1, '#e84393');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(i * (barWidth + 1), h - barHeight, barWidth, barHeight);
+        }
+    }
+    draw();
+}
+
+function togglePlayPause() {
+    if (!audioEl) return;
+    if (audioEl.paused) {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        audioEl.play().catch(err => {
+            console.error('[JamWall] Resume failed:', err);
+            showNpStatus('Resume failed: ' + err.message);
+        });
+        if (analyser) startVisualization();
+    } else {
+        audioEl.pause();
+        if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    }
+}
+
+function seekAudio(e) {
+    if (!audioEl || !audioEl.duration) return;
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const pct = (e.clientX - rect.left) / rect.width;
+    audioEl.currentTime = pct * audioEl.duration;
+}
+
+function stopPlayback() {
+    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    document.getElementById('nowPlaying').classList.remove('active');
+    document.getElementById('npProgress').style.width = '0%';
+    const canvas = document.getElementById('npCanvas');
+    if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
+    currentlyPlaying = null;
+}
+
+// ===== DEBUG =====
+async function loadDebug() {
+    const container = document.getElementById('debugContent');
+    container.innerHTML = '<div class="spinner"></div>';
+
+    try {
+        const data = await api('debug.php?action=status');
+        let html = '';
+
+        html += `<div class="debug-disk">Disk: ${esc(data.disk_usage)}</div>`;
+
+        if (data.entries.length === 0) {
+            html += `<div class="empty-state"><div class="empty-state-text">No conversions yet</div></div>`;
+        } else {
+            html += data.entries.map(e => {
+                const thumb = `https://img.youtube.com/vi/${esc(e.youtube_id)}/default.jpg`;
+                const sizeStr = e.mp3_size ? `${(e.mp3_size / 1024 / 1024).toFixed(1)}MB` : '—';
+                const durStr = e.duration ? `${Math.floor(e.duration / 60)}:${String(Math.floor(e.duration % 60)).padStart(2, '0')}` : '—';
+                return `
+                    <div class="debug-entry" id="debug-${esc(e.youtube_id)}">
+                        <div class="debug-entry-header">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <img src="${thumb}" style="width:32px;height:24px;border-radius:3px;object-fit:cover">
+                                <span class="debug-id">${esc(e.youtube_id)}</span>
+                            </div>
+                            <span class="debug-status debug-status-${esc(e.status)}">${esc(e.status)}</span>
+                        </div>
+                        <div class="debug-meta">
+                            Size: ${sizeStr} &nbsp;|&nbsp; Duration: ${durStr}
+                            ${e.error ? ` &nbsp;|&nbsp; Error: ${esc(e.error)}` : ''}
+                            ${e.lock_age_seconds ? ` &nbsp;|&nbsp; Lock age: ${e.lock_age_seconds}s` : ''}
+                        </div>
+                        <div class="debug-actions">
+                            ${e.has_log ? `<button class="btn btn-secondary btn-sm" onclick="viewLog('${esc(e.youtube_id)}')">View Log</button>` : ''}
+                            ${e.mp3_exists ? `<button class="btn btn-secondary btn-sm" onclick="testPlay('${esc(e.youtube_id)}')">Test Play</button>` : ''}
+                            <button class="btn btn-secondary btn-sm" onclick="retryConversion('${esc(e.youtube_id)}')">Retry</button>
+                        </div>
+                        <div class="debug-log hidden" id="log-${esc(e.youtube_id)}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-text">Error: ${esc(e.message)}</div></div>`;
+    }
+}
+
+async function viewLog(ytId) {
+    const logEl = document.getElementById(`log-${ytId}`);
+    if (!logEl.classList.contains('hidden')) {
+        logEl.classList.add('hidden');
+        return;
+    }
+    logEl.textContent = 'Loading...';
+    logEl.classList.remove('hidden');
+
+    try {
+        const data = await api(`debug.php?action=log&id=${ytId}`);
+        logEl.textContent = data.log || '(empty log)';
+        logEl.scrollTop = logEl.scrollHeight;
+    } catch (e) {
+        logEl.textContent = 'Error loading log: ' + e.message;
+    }
+}
+
+async function retryConversion(ytId) {
+    try {
+        await api(`debug.php?action=retry&id=${ytId}`);
+        toast('Retrying conversion...', 'success');
+        delete audioReady[ytId];
+        setTimeout(loadDebug, 2000);
+    } catch (e) {
+        toast('Retry failed: ' + e.message, 'error');
+    }
+}
+
+async function retryAll() {
+    if (!confirm('This will delete ALL converted audio and re-download. Continue?')) return;
+    try {
+        const data = await api('debug.php?action=retry_all');
+        toast(`Retrying ${data.count} conversions...`, 'success');
+        audioReady = {};
+        setTimeout(loadDebug, 3000);
+    } catch (e) {
+        toast('Retry all failed: ' + e.message, 'error');
+    }
+}
+
+function testPlay(ytId) {
+    // Direct test: try to load and play the audio file, show errors in debug
+    initAudio();
+    initAudioContext();
+    const url = `/audio/${ytId}.mp3`;
+    const logEl = document.getElementById(`log-${ytId}`);
+    logEl.classList.remove('hidden');
+    logEl.textContent = `Testing playback of ${url}...\n`;
+
+    const addLog = (msg) => { logEl.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; };
+
+    // Test with fetch first to check HTTP response
+    fetch(url).then(res => {
+        addLog(`HTTP ${res.status} ${res.statusText}`);
+        addLog(`Content-Type: ${res.headers.get('content-type')}`);
+        addLog(`Content-Length: ${res.headers.get('content-length')}`);
+        addLog(`CORS: ${res.headers.get('access-control-allow-origin') || 'none'}`);
+        return res.blob();
+    }).then(blob => {
+        addLog(`Blob size: ${blob.size} bytes, type: ${blob.type}`);
+        addLog('Setting audio.src and calling play()...');
+        audioEl.src = url;
+        audioEl.load();
+
+        const onError = () => {
+            const err = audioEl.error;
+            const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+            addLog(`ERROR: ${codes[err?.code] || err?.code} — ${err?.message || 'no message'}`);
+        };
+        const onCanPlay = () => {
+            addLog(`canplay — duration: ${audioEl.duration}s`);
+            audioEl.play().then(() => addLog('Playing!')).catch(e => addLog(`play() rejected: ${e.message}`));
+            audioEl.removeEventListener('canplay', onCanPlay);
+        };
+        const onTimeUpdate = () => {
+            addLog(`timeupdate — position: ${audioEl.currentTime.toFixed(1)}s / ${audioEl.duration.toFixed(1)}s`);
+            audioEl.removeEventListener('timeupdate', onTimeUpdate);
+        };
+
+        audioEl.addEventListener('error', onError, { once: true });
+        audioEl.addEventListener('canplay', onCanPlay);
+        audioEl.addEventListener('timeupdate', onTimeUpdate);
+    }).catch(e => {
+        addLog(`Fetch error: ${e.message}`);
+    });
+}
+
+// ===== VIDEO TITLES =====
+const videoTitleCache = {};
+
+async function fetchVideoTitle(ytId) {
+    if (videoTitleCache[ytId]) return videoTitleCache[ytId];
+    try {
+        const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
+        const data = await res.json();
+        const title = data.title || 'Untitled';
+        videoTitleCache[ytId] = title;
+        return title;
+    } catch {
+        return null;
+    }
+}
+
+async function loadVideoTitles() {
+    const els = document.querySelectorAll('[data-ytid]');
+    const ids = [...new Set([...els].map(el => el.dataset.ytid))];
+    await Promise.all(ids.map(async id => {
+        const title = await fetchVideoTitle(id);
+        if (title) {
+            document.querySelectorAll(`[data-ytid="${id}"]`).forEach(el => {
+                el.textContent = title;
+                el.classList.remove('loading');
+            });
+        }
+    }));
+}
+
+// ===== UTILITIES =====
+function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+
+function extractYouTubeId(url) {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/|music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+}
+
+function seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+}
+
+function toLocalISO(date) {
+    const offset = date.getTimezoneOffset();
+    const local = new Date(date.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function toast(msg, type = 'info') {
+    const container = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = `toast ${type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : ''}`;
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.classList.remove('active');
+    });
+});
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
