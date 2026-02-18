@@ -1661,6 +1661,8 @@ function startVisualization() {
     // Parse rgb for alpha variants
     const rgbMatch = vizAccent.match(/\d+/g) || [108, 92, 231];
     const [ar, ag, ab] = rgbMatch;
+    const lightMatch = vizLight.match(/\d+/g) || [139, 92, 246];
+    const [lr, lg, lb] = lightMatch;
     const barGradUp = ctx.createLinearGradient(0, midY, 0, 0);
     barGradUp.addColorStop(0, vizAccent);
     barGradUp.addColorStop(0.6, vizLight);
@@ -1700,7 +1702,7 @@ function startVisualization() {
             const x = i * (barWidth + gap);
 
             if (barH < 0.5) {
-                ctx.fillStyle = 'rgba(108,92,231,0.3)';
+                ctx.fillStyle = `rgba(${ar},${ag},${ab},0.3)`;
                 ctx.fillRect(x, midY - 0.5, barWidth, 1);
                 vizPeaks[i] = Math.max(0, vizPeaks[i] - 0.4);
                 continue;
@@ -1716,9 +1718,9 @@ function startVisualization() {
 
             // Glow on loud bars
             if (norm > 0.5) {
-                ctx.shadowColor = '#a855f7';
+                ctx.shadowColor = `rgb(${lr},${lg},${lb})`;
                 ctx.shadowBlur = norm * 8;
-                ctx.fillStyle = 'rgba(168,85,247,0.15)';
+                ctx.fillStyle = `rgba(${lr},${lg},${lb},0.15)`;
                 ctx.fillRect(x, midY - barH, barWidth, barH);
                 ctx.shadowBlur = 0;
             }
@@ -1749,7 +1751,7 @@ function startVisualization() {
         }
 
         // Center line
-        ctx.fillStyle = 'rgba(108,92,231,0.2)';
+        ctx.fillStyle = `rgba(${ar},${ag},${ab},0.2)`;
         ctx.fillRect(0, midY, cssW, 0.5);
 
         // === PARTICLES / SPARKLES ===
@@ -2084,6 +2086,14 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
 });
 
 // ===== THEME =====
+function restartVisualizationIfActive() {
+    if (animFrameId && analyser) {
+        cancelAnimationFrame(animFrameId);
+        animFrameId = null;
+        startVisualization();
+    }
+}
+
 function applyTheme(theme) {
     if (theme === 'light') {
         document.documentElement.setAttribute('data-theme', 'light');
@@ -2096,6 +2106,7 @@ function applyTheme(theme) {
         document.getElementById('themeIconSun').classList.remove('hidden');
         document.getElementById('themeIconMoon').classList.add('hidden');
     }
+    restartVisualizationIfActive();
 }
 
 function toggleTheme() {
@@ -2122,6 +2133,7 @@ function cycleAccent() {
     const next = accentOptions[(idx + 1) % accentOptions.length];
     localStorage.setItem('jw_accent', next);
     applyAccent(next);
+    restartVisualizationIfActive();
 }
 
 // Restore saved theme + accent on load
