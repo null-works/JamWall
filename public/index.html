@@ -25,6 +25,10 @@
             --accent: #6c5ce7;
             --accent-glow: rgba(108, 92, 231, 0.3);
             --accent-secondary: #e84393;
+            --accent-light: #8b5cf6;
+            --accent-hover-start: #5a4bd4;
+            --accent-hover-end: #7c4ddb;
+            --accent-sub: rgba(108, 92, 231, 0.15);
             --green: #00b894;
             --orange: #fdcb6e;
             --red: #d63031;
@@ -57,6 +61,10 @@
             --accent: #6c5ce7;
             --accent-glow: rgba(108, 92, 231, 0.2);
             --accent-secondary: #e84393;
+            --accent-light: #8b5cf6;
+            --accent-hover-start: #5a4bd4;
+            --accent-hover-end: #7c4ddb;
+            --accent-sub: rgba(108, 92, 231, 0.15);
             --green: #00a884;
             --orange: #e6a700;
             --red: #d63031;
@@ -67,6 +75,56 @@
             --shadow-toast: rgba(0, 0, 0, 0.1);
             --playing-bg: rgba(108, 92, 231, 0.08);
             --vote-bg: rgba(108, 92, 231, 0.06);
+        }
+
+        /* === ACCENT COLOR THEMES === */
+        [data-accent="blue"] {
+            --accent: #3b82f6; --accent-glow: rgba(59, 130, 246, 0.3);
+            --accent-secondary: #06b6d4; --accent-light: #60a5fa;
+            --accent-hover-start: #2563eb; --accent-hover-end: #3b82f6;
+            --accent-sub: rgba(59, 130, 246, 0.15);
+            --border-focus: #3b82f6;
+            --playing-bg: rgba(59, 130, 246, 0.06); --vote-bg: rgba(59, 130, 246, 0.04);
+        }
+        [data-theme="light"][data-accent="blue"] {
+            --accent-glow: rgba(59, 130, 246, 0.2);
+            --playing-bg: rgba(59, 130, 246, 0.08); --vote-bg: rgba(59, 130, 246, 0.06);
+        }
+        [data-accent="teal"] {
+            --accent: #14b8a6; --accent-glow: rgba(20, 184, 166, 0.3);
+            --accent-secondary: #6366f1; --accent-light: #2dd4bf;
+            --accent-hover-start: #0d9488; --accent-hover-end: #14b8a6;
+            --accent-sub: rgba(20, 184, 166, 0.15);
+            --border-focus: #14b8a6;
+            --playing-bg: rgba(20, 184, 166, 0.06); --vote-bg: rgba(20, 184, 166, 0.04);
+        }
+        [data-theme="light"][data-accent="teal"] {
+            --accent-glow: rgba(20, 184, 166, 0.2);
+            --playing-bg: rgba(20, 184, 166, 0.08); --vote-bg: rgba(20, 184, 166, 0.06);
+        }
+        [data-accent="rose"] {
+            --accent: #f43f5e; --accent-glow: rgba(244, 63, 94, 0.3);
+            --accent-secondary: #f97316; --accent-light: #fb7185;
+            --accent-hover-start: #e11d48; --accent-hover-end: #f43f5e;
+            --accent-sub: rgba(244, 63, 94, 0.15);
+            --border-focus: #f43f5e;
+            --playing-bg: rgba(244, 63, 94, 0.06); --vote-bg: rgba(244, 63, 94, 0.04);
+        }
+        [data-theme="light"][data-accent="rose"] {
+            --accent-glow: rgba(244, 63, 94, 0.2);
+            --playing-bg: rgba(244, 63, 94, 0.08); --vote-bg: rgba(244, 63, 94, 0.06);
+        }
+        [data-accent="amber"] {
+            --accent: #f59e0b; --accent-glow: rgba(245, 158, 11, 0.3);
+            --accent-secondary: #ef4444; --accent-light: #fbbf24;
+            --accent-hover-start: #d97706; --accent-hover-end: #f59e0b;
+            --accent-sub: rgba(245, 158, 11, 0.15);
+            --border-focus: #f59e0b;
+            --playing-bg: rgba(245, 158, 11, 0.06); --vote-bg: rgba(245, 158, 11, 0.04);
+        }
+        [data-theme="light"][data-accent="amber"] {
+            --accent-glow: rgba(245, 158, 11, 0.2);
+            --playing-bg: rgba(245, 158, 11, 0.08); --vote-bg: rgba(245, 158, 11, 0.06);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -188,10 +246,10 @@
             cursor: pointer; transition: all 0.2s; text-align: center;
         }
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light)); color: white;
             box-shadow: 0 2px 12px var(--accent-glow);
         }
-        .btn-primary:hover { background: linear-gradient(135deg, #5a4bd4, #7c4ddb); transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--accent-hover-start), var(--accent-hover-end)); transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
         .btn-primary:active { transform: translateY(0); }
         .btn-secondary {
             background: var(--bg-card); color: var(--text-primary);
@@ -223,7 +281,7 @@
             border-radius: 20px; font-size: 11px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .phase-submitting { background: rgba(108, 92, 231, 0.15); color: var(--accent); }
+        .phase-submitting { background: var(--accent-sub); color: var(--accent); }
         .phase-voting { background: rgba(253, 203, 110, 0.15); color: var(--orange); }
         .phase-results { background: rgba(0, 184, 148, 0.15); color: var(--green); }
 
@@ -276,7 +334,7 @@
         }
         .sub-card-art:hover .art-play { opacity: 1; }
         .sub-card.playing .sub-card-art .art-play {
-            opacity: 1; background: rgba(108, 92, 231, 0.6);
+            opacity: 1; background: var(--accent-sub);
         }
         .art-play svg { width: 18px; height: 18px; fill: white; }
         .sub-card-info { flex: 1; min-width: 0; }
@@ -306,7 +364,7 @@
             backdrop-filter: blur(20px);
             border-top: 1px solid var(--accent);
             border-bottom: 1px solid var(--border);
-            box-shadow: 0 -4px 20px rgba(108, 92, 231, 0.15);
+            box-shadow: 0 -4px 20px var(--accent-glow);
             display: none;
         }
         .now-playing.active { display: block; }
@@ -518,15 +576,22 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* === THEME TOGGLE === */
-        .theme-toggle {
+        /* === THEME TOGGLES === */
+        .theme-toggle, .color-toggle {
             background: none; border: none; color: var(--text-secondary);
             font-size: 18px; cursor: pointer; padding: 4px 8px;
             transition: color 0.2s;
             display: flex; align-items: center;
         }
-        .theme-toggle:hover { color: var(--text-primary); }
+        .theme-toggle:hover, .color-toggle:hover { color: var(--text-primary); }
         .theme-toggle svg { width: 20px; height: 20px; }
+        .color-dot {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid var(--text-muted);
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .color-toggle:hover .color-dot { transform: scale(1.15); border-color: var(--text-secondary); }
 
         /* === HIDDEN UTILITY === */
         .hidden { display: none !important; }
@@ -591,6 +656,9 @@
     <div class="topbar">
         <button class="topbar-back" id="backBtn" onclick="goBack()">←</button>
         <h1 id="topbarTitle">JamWall</h1>
+        <button class="color-toggle" id="colorToggle" onclick="cycleAccent()" title="Change accent color">
+            <div class="color-dot" id="colorDot"></div>
+        </button>
         <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">
             <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
             <svg id="themeIconMoon" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
@@ -1583,14 +1651,21 @@ function startVisualization() {
         }
     }
 
-    // Pre-build gradients
+    // Pre-build gradients using current accent colors
+    const styles = getComputedStyle(document.documentElement);
+    const vizAccent = styles.getPropertyValue('--accent').trim();
+    const vizSecondary = styles.getPropertyValue('--accent-secondary').trim();
+    const vizLight = styles.getPropertyValue('--accent-light').trim();
+    // Parse rgb for alpha variants
+    const rgbMatch = vizAccent.match(/\d+/g) || [108, 92, 231];
+    const [ar, ag, ab] = rgbMatch;
     const barGradUp = ctx.createLinearGradient(0, midY, 0, 0);
-    barGradUp.addColorStop(0, '#6c5ce7');
-    barGradUp.addColorStop(0.6, '#a855f7');
-    barGradUp.addColorStop(1, '#e84393');
+    barGradUp.addColorStop(0, vizAccent);
+    barGradUp.addColorStop(0.6, vizLight);
+    barGradUp.addColorStop(1, vizSecondary);
     const barGradDown = ctx.createLinearGradient(0, midY, 0, cssH);
-    barGradDown.addColorStop(0, 'rgba(108,92,231,0.5)');
-    barGradDown.addColorStop(1, 'rgba(108,92,231,0.05)');
+    barGradDown.addColorStop(0, `rgba(${ar},${ag},${ab},0.5)`);
+    barGradDown.addColorStop(1, `rgba(${ar},${ag},${ab},0.05)`);
 
     let frameCount = 0;
 
@@ -2028,10 +2103,31 @@ function toggleTheme() {
     applyTheme(next);
 }
 
-// Restore saved theme on load
-(function restoreTheme() {
-    const saved = localStorage.getItem('jw_theme');
-    if (saved) applyTheme(saved);
+// ===== ACCENT COLORS =====
+const accentOptions = ['purple', 'blue', 'teal', 'rose', 'amber'];
+
+function applyAccent(accent) {
+    if (accent && accent !== 'purple') {
+        document.documentElement.setAttribute('data-accent', accent);
+    } else {
+        document.documentElement.removeAttribute('data-accent');
+    }
+}
+
+function cycleAccent() {
+    const current = document.documentElement.getAttribute('data-accent') || 'purple';
+    const idx = accentOptions.indexOf(current);
+    const next = accentOptions[(idx + 1) % accentOptions.length];
+    localStorage.setItem('jw_accent', next);
+    applyAccent(next);
+}
+
+// Restore saved theme + accent on load
+(function restorePreferences() {
+    const savedTheme = localStorage.getItem('jw_theme');
+    if (savedTheme) applyTheme(savedTheme);
+    const savedAccent = localStorage.getItem('jw_accent');
+    if (savedAccent) applyAccent(savedAccent);
 })();
 
 // Register service worker
