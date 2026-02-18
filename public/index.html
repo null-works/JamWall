@@ -1342,7 +1342,7 @@ function playTrack(ytId, el) {
 
     // Stop current visualization and reset peaks
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
-    vizPeaks = []; vizPrevValues = [];
+    vizPeaks = []; vizPrevValues = []; vizParticles = [];
 
     // Highlight row
     document.querySelectorAll('.sub-card.playing').forEach(c => c.classList.remove('playing'));
@@ -1433,9 +1433,10 @@ function playAudioFile(url) {
     });
 }
 
-// Peak hold state for Winamp-style falling peaks
+// Visualizer state
 let vizPeaks = [];
 let vizPrevValues = [];
+let vizParticles = []; // sparkle particle pool
 
 function startVisualization() {
     if (!analyser) return;
@@ -1458,13 +1459,40 @@ function startVisualization() {
     const barWidth = (cssW - (barCount - 1) * gap) / barCount;
     const midY = cssH / 2;
 
-    // Init peak/smoothing arrays
+    // Init state arrays
     if (vizPeaks.length !== barCount) {
         vizPeaks = new Array(barCount).fill(0);
         vizPrevValues = new Array(barCount).fill(0);
     }
 
-    // Pre-build gradient for bars (purple → pink, matching app accent)
+    // Sparkle colors (white, pink, purple, gold)
+    const sparkleColors = [
+        [255, 255, 255],
+        [232, 67, 147],
+        [168, 85, 247],
+        [253, 203, 110],
+    ];
+
+    function spawnSparkles(x, y, intensity) {
+        const count = Math.floor(intensity * 3) + 1;
+        for (let s = 0; s < count; s++) {
+            if (vizParticles.length > 80) break; // cap particle count
+            const color = sparkleColors[Math.floor(Math.random() * sparkleColors.length)];
+            vizParticles.push({
+                x: x + Math.random() * barWidth,
+                y: y,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: -(Math.random() * 1.2 + 0.3),
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.03,
+                size: Math.random() * 2 + 0.5,
+                r: color[0], g: color[1], b: color[2],
+                twinkle: Math.random() * Math.PI * 2, // phase offset for shimmer
+            });
+        }
+    }
+
+    // Pre-build gradients
     const barGradUp = ctx.createLinearGradient(0, midY, 0, 0);
     barGradUp.addColorStop(0, '#6c5ce7');
     barGradUp.addColorStop(0.6, '#a855f7');
@@ -1473,18 +1501,17 @@ function startVisualization() {
     barGradDown.addColorStop(0, 'rgba(108,92,231,0.5)');
     barGradDown.addColorStop(1, 'rgba(108,92,231,0.05)');
 
+    let frameCount = 0;
+
     function draw() {
         animFrameId = requestAnimationFrame(draw);
         analyser.getByteFrequencyData(dataArray);
+        frameCount++;
 
-        // Clear with slight trail for smoother feel
         ctx.clearRect(0, 0, cssW, cssH);
 
-        // Logarithmic frequency grouping (more bins for bass, fewer for treble)
-        const step = Math.max(1, Math.floor(bufferLength / barCount));
-
         for (let i = 0; i < barCount; i++) {
-            // Weighted average of frequency bins
+            // Frequency bin averaging
             let sum = 0, count = 0;
             const startBin = Math.floor((i / barCount) * bufferLength * 0.8);
             const endBin = Math.floor(((i + 1) / barCount) * bufferLength * 0.8);
@@ -1494,7 +1521,7 @@ function startVisualization() {
             }
             const raw = count > 0 ? sum / count : 0;
 
-            // Smooth with previous frame (snappy attack, slow decay)
+            // Smooth: snappy attack, slow decay
             const val = raw > vizPrevValues[i]
                 ? raw * 0.7 + vizPrevValues[i] * 0.3
                 : raw * 0.3 + vizPrevValues[i] * 0.7;
@@ -1505,15 +1532,13 @@ function startVisualization() {
             const x = i * (barWidth + gap);
 
             if (barH < 0.5) {
-                // Tiny idle line
                 ctx.fillStyle = 'rgba(108,92,231,0.3)';
                 ctx.fillRect(x, midY - 0.5, barWidth, 1);
-                // Decay peaks
                 vizPeaks[i] = Math.max(0, vizPeaks[i] - 0.4);
                 continue;
             }
 
-            // Main bars (mirrored from center — Winamp style)
+            // Main bars (mirrored from center)
             ctx.fillStyle = barGradUp;
             ctx.fillRect(x, midY - barH, barWidth, barH);
 
@@ -1521,7 +1546,7 @@ function startVisualization() {
             ctx.fillStyle = barGradDown;
             ctx.fillRect(x, midY + 1, barWidth, barH * 0.6);
 
-            // Glow effect on loud bars
+            // Glow on loud bars
             if (norm > 0.5) {
                 ctx.shadowColor = '#a855f7';
                 ctx.shadowBlur = norm * 8;
@@ -1530,9 +1555,14 @@ function startVisualization() {
                 ctx.shadowBlur = 0;
             }
 
-            // Peak indicators (bright dots that fall slowly)
+            // Peak indicators
+            const prevPeak = vizPeaks[i];
             if (barH > vizPeaks[i]) {
                 vizPeaks[i] = barH;
+                // Spawn sparkles when a bar hits a new peak (energy burst)
+                if (barH - prevPeak > 2 && norm > 0.4) {
+                    spawnSparkles(x, midY - barH, norm);
+                }
             } else {
                 vizPeaks[i] = Math.max(0, vizPeaks[i] - 0.35);
             }
@@ -1543,11 +1573,64 @@ function startVisualization() {
                 ctx.fillStyle = `rgba(255,255,255,${peakBrightness})`;
                 ctx.fillRect(x, peakY - 1.5, barWidth, 1.5);
             }
+
+            // Ambient sparkles on hot bars (occasional)
+            if (norm > 0.65 && Math.random() < 0.15) {
+                spawnSparkles(x, midY - barH * Math.random(), norm * 0.5);
+            }
         }
 
-        // Center line (subtle)
+        // Center line
         ctx.fillStyle = 'rgba(108,92,231,0.2)';
         ctx.fillRect(0, midY, cssW, 0.5);
+
+        // === PARTICLES / SPARKLES ===
+        ctx.save();
+        for (let p = vizParticles.length - 1; p >= 0; p--) {
+            const pt = vizParticles[p];
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            pt.vy += 0.02; // gentle gravity
+            pt.life -= pt.decay;
+
+            if (pt.life <= 0 || pt.y > cssH || pt.y < -2 || pt.x < -2 || pt.x > cssW + 2) {
+                vizParticles.splice(p, 1);
+                continue;
+            }
+
+            // Twinkle: oscillate alpha for a shimmer effect
+            const twinkle = 0.5 + 0.5 * Math.sin(frameCount * 0.3 + pt.twinkle);
+            const alpha = pt.life * twinkle;
+
+            // Draw sparkle: bright center dot + soft glow
+            const sz = pt.size * (0.5 + pt.life * 0.5);
+            ctx.shadowColor = `rgba(${pt.r},${pt.g},${pt.b},${alpha * 0.8})`;
+            ctx.shadowBlur = sz * 3;
+            ctx.fillStyle = `rgba(${pt.r},${pt.g},${pt.b},${alpha})`;
+
+            // Diamond/star shape for sparkles
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y - sz);
+            ctx.lineTo(pt.x + sz * 0.5, pt.y);
+            ctx.lineTo(pt.x, pt.y + sz);
+            ctx.lineTo(pt.x - sz * 0.5, pt.y);
+            ctx.closePath();
+            ctx.fill();
+
+            // Cross sparkle on brighter particles
+            if (alpha > 0.5 && sz > 1) {
+                ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.4})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(pt.x - sz * 1.2, pt.y);
+                ctx.lineTo(pt.x + sz * 1.2, pt.y);
+                ctx.moveTo(pt.x, pt.y - sz * 1.2);
+                ctx.lineTo(pt.x, pt.y + sz * 1.2);
+                ctx.stroke();
+            }
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
     }
     draw();
 }
@@ -1578,7 +1661,7 @@ function seekAudio(e) {
 function stopPlayback() {
     if (audioEl) { audioEl.pause(); audioEl.src = ''; }
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
-    vizPeaks = []; vizPrevValues = [];
+    vizPeaks = []; vizPrevValues = []; vizParticles = [];
     document.getElementById('nowPlaying').classList.remove('active');
     document.getElementById('npProgress').style.width = '0%';
     const canvas = document.getElementById('npCanvas');
