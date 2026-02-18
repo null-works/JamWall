@@ -574,7 +574,10 @@
         <div id="debugScreen" class="screen">
             <div class="section-header">
                 <span class="section-title">Debug</span>
-                <button class="btn btn-secondary btn-sm" onclick="loadDebug()">Refresh</button>
+                <div style="display:flex;gap:6px">
+                    <button class="btn btn-secondary btn-sm" onclick="loadDebug()">Refresh</button>
+                    <button class="btn btn-danger btn-sm" onclick="retryAll()">Retry All</button>
+                </div>
             </div>
             <div id="debugContent"></div>
         </div>
@@ -1276,10 +1279,38 @@ function initAudio() {
     });
     audioEl.addEventListener('play', () => {
         document.getElementById('npPlayPause').innerHTML = '&#9646;&#9646;';
+        showNpStatus('');
     });
     audioEl.addEventListener('pause', () => {
         document.getElementById('npPlayPause').innerHTML = '&#9654;';
     });
+    audioEl.addEventListener('error', () => {
+        const err = audioEl.error;
+        const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+        const msg = `Audio error: ${codes[err?.code] || err?.code || 'unknown'} — ${err?.message || 'no details'}`;
+        console.error(msg, err);
+        showNpStatus(msg);
+    });
+    audioEl.addEventListener('stalled', () => {
+        console.warn('Audio stalled');
+        showNpStatus('Audio stalled — buffering...');
+    });
+    audioEl.addEventListener('waiting', () => {
+        showNpStatus('Buffering...');
+    });
+    audioEl.addEventListener('canplay', () => {
+        if (!audioEl.paused) showNpStatus('');
+    });
+}
+
+function showNpStatus(msg) {
+    const el = document.getElementById('npStatus');
+    if (msg) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
 }
 
 function initAudioContext() {
@@ -1383,8 +1414,15 @@ async function pollAudio(ytId) {
 
 function playAudioFile(url) {
     initAudioContext();
+    console.log('[JamWall] Playing audio:', url);
     audioEl.src = url;
-    audioEl.play().catch(() => {});
+    audioEl.load();
+    audioEl.play().then(() => {
+        console.log('[JamWall] Playback started, duration:', audioEl.duration);
+    }).catch(err => {
+        console.error('[JamWall] Play failed:', err);
+        showNpStatus('Play failed: ' + err.message);
+    });
     startVisualization();
 }
 
@@ -1432,7 +1470,10 @@ function togglePlayPause() {
     if (!audioEl) return;
     if (audioEl.paused) {
         if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        audioEl.play().catch(() => {});
+        audioEl.play().catch(err => {
+            console.error('[JamWall] Resume failed:', err);
+            showNpStatus('Resume failed: ' + err.message);
+        });
         if (analyser) startVisualization();
     } else {
         audioEl.pause();
@@ -1493,6 +1534,7 @@ async function loadDebug() {
                         </div>
                         <div class="debug-actions">
                             ${e.has_log ? `<button class="btn btn-secondary btn-sm" onclick="viewLog('${esc(e.youtube_id)}')">View Log</button>` : ''}
+                            ${e.mp3_exists ? `<button class="btn btn-secondary btn-sm" onclick="testPlay('${esc(e.youtube_id)}')">Test Play</button>` : ''}
                             <button class="btn btn-secondary btn-sm" onclick="retryConversion('${esc(e.youtube_id)}')">Retry</button>
                         </div>
                         <div class="debug-log hidden" id="log-${esc(e.youtube_id)}"></div>
@@ -1529,12 +1571,70 @@ async function retryConversion(ytId) {
     try {
         await api(`debug.php?action=retry&id=${ytId}`);
         toast('Retrying conversion...', 'success');
-        // Clear cached ready state
         delete audioReady[ytId];
         setTimeout(loadDebug, 2000);
     } catch (e) {
         toast('Retry failed: ' + e.message, 'error');
     }
+}
+
+async function retryAll() {
+    if (!confirm('This will delete ALL converted audio and re-download. Continue?')) return;
+    try {
+        const data = await api('debug.php?action=retry_all');
+        toast(`Retrying ${data.count} conversions...`, 'success');
+        audioReady = {};
+        setTimeout(loadDebug, 3000);
+    } catch (e) {
+        toast('Retry all failed: ' + e.message, 'error');
+    }
+}
+
+function testPlay(ytId) {
+    // Direct test: try to load and play the audio file, show errors in debug
+    initAudio();
+    initAudioContext();
+    const url = `/audio/${ytId}.mp3`;
+    const logEl = document.getElementById(`log-${ytId}`);
+    logEl.classList.remove('hidden');
+    logEl.textContent = `Testing playback of ${url}...\n`;
+
+    const addLog = (msg) => { logEl.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`; logEl.scrollTop = logEl.scrollHeight; };
+
+    // Test with fetch first to check HTTP response
+    fetch(url).then(res => {
+        addLog(`HTTP ${res.status} ${res.statusText}`);
+        addLog(`Content-Type: ${res.headers.get('content-type')}`);
+        addLog(`Content-Length: ${res.headers.get('content-length')}`);
+        addLog(`CORS: ${res.headers.get('access-control-allow-origin') || 'none'}`);
+        return res.blob();
+    }).then(blob => {
+        addLog(`Blob size: ${blob.size} bytes, type: ${blob.type}`);
+        addLog('Setting audio.src and calling play()...');
+        audioEl.src = url;
+        audioEl.load();
+
+        const onError = () => {
+            const err = audioEl.error;
+            const codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+            addLog(`ERROR: ${codes[err?.code] || err?.code} — ${err?.message || 'no message'}`);
+        };
+        const onCanPlay = () => {
+            addLog(`canplay — duration: ${audioEl.duration}s`);
+            audioEl.play().then(() => addLog('Playing!')).catch(e => addLog(`play() rejected: ${e.message}`));
+            audioEl.removeEventListener('canplay', onCanPlay);
+        };
+        const onTimeUpdate = () => {
+            addLog(`timeupdate — position: ${audioEl.currentTime.toFixed(1)}s / ${audioEl.duration.toFixed(1)}s`);
+            audioEl.removeEventListener('timeupdate', onTimeUpdate);
+        };
+
+        audioEl.addEventListener('error', onError, { once: true });
+        audioEl.addEventListener('canplay', onCanPlay);
+        audioEl.addEventListener('timeupdate', onTimeUpdate);
+    }).catch(e => {
+        addLog(`Fetch error: ${e.message}`);
+    });
 }
 
 // ===== VIDEO TITLES =====

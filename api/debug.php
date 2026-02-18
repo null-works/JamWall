@@ -117,4 +117,32 @@ if ($action === 'retry') {
     jsonResponse(['status' => 'retrying', 'youtube_id' => $id]);
 }
 
+// GET ?action=retry_all — wipe all audio files and re-trigger conversions
+if ($action === 'retry_all') {
+    // Get all youtube IDs from submissions
+    $db = getDB();
+    $rows = $db->query("SELECT DISTINCT youtube_id FROM submissions")->fetchAll(SQLITE3_ASSOC);
+
+    // Wipe all audio files
+    array_map('unlink', glob("$audioDir/*.mp3"));
+    array_map('unlink', glob("$audioDir/*.err"));
+    array_map('unlink', glob("$audioDir/*.lock"));
+    array_map('unlink', glob("$audioDir/*.webm"));
+    // Clear logs
+    array_map('unlink', glob("$logDir/*.log"));
+
+    // Re-trigger all conversions
+    $scriptPath = __DIR__ . '/convert.sh';
+    $triggered = [];
+    foreach ($rows as $row) {
+        $id = $row['youtube_id'];
+        if (!preg_match('/^[a-zA-Z0-9_-]{11}$/', $id)) continue;
+        $escapedId = escapeshellarg($id);
+        exec("nohup sh $scriptPath $escapedId > /dev/null 2>&1 &");
+        $triggered[] = $id;
+    }
+
+    jsonResponse(['status' => 'retrying_all', 'count' => count($triggered), 'ids' => $triggered]);
+}
+
 jsonError('Unknown action', 400);
