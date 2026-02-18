@@ -5,8 +5,8 @@ set -e
 mkdir -p /var/www/data /var/www/data/audio /var/www/data/audio/logs
 chown -R www-data:www-data /var/www/data
 
-# Wipe all audio files on startup — forces fresh conversions
-rm -rf /var/www/data/audio/*
+# Clean up stale lock files from unclean shutdowns (but keep converted MP3s)
+rm -f /var/www/data/audio/*.lock
 mkdir -p /var/www/data/audio/logs
 
 # Initialize DB if schema exists and DB doesn't

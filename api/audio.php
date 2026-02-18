@@ -17,15 +17,10 @@ $mp3Path = "$audioDir/$ytId.mp3";
 $lockPath = "$audioDir/$ytId.lock";
 $errPath = "$audioDir/$ytId.err";
 
-// Already converted — but verify the file isn't truncated/empty
+// Already converted — file exists = ready
+// (convert.sh validates before moving to final location)
 if (file_exists($mp3Path)) {
-    $size = filesize($mp3Path);
-    if ($size > 5242880) { // > 5MB = valid
-        jsonResponse(['status' => 'ready', 'url' => "/audio/$ytId.mp3"]);
-    }
-    // Truncated file — delete and reconvert
-    @unlink($mp3Path);
-    @unlink($errPath);
+    jsonResponse(['status' => 'ready', 'url' => "/audio/$ytId.mp3"]);
 }
 
 // Previous conversion failed — report it (debug tab can retry)

@@ -1414,20 +1414,26 @@ async function pollAudio(ytId) {
 }
 
 function playAudioFile(url) {
-    initAudioContext();
     console.log('[JamWall] Playing audio:', url);
+    // Like jcink_audio: set src and play first, visualization is optional
     audioEl.src = url;
-    audioEl.load();
     audioEl.play().then(() => {
         console.log('[JamWall] Playback started, duration:', audioEl.duration);
+        // Only init Web Audio API after playback succeeds
+        try {
+            initAudioContext();
+            startVisualization();
+        } catch (e) {
+            console.warn('[JamWall] Visualization failed (playback unaffected):', e);
+        }
     }).catch(err => {
         console.error('[JamWall] Play failed:', err);
         showNpStatus('Play failed: ' + err.message);
     });
-    startVisualization();
 }
 
 function startVisualization() {
+    if (!analyser) return;
     const canvas = document.getElementById('npCanvas');
     const ctx = canvas.getContext('2d');
     const bufferLength = analyser.frequencyBinCount;
