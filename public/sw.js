@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-v11';
+const CACHE_NAME = 'jw-v12';
 
 self.addEventListener('install', e => {
     self.skipWaiting();
