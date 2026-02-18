@@ -1452,6 +1452,12 @@ function showNpStatus(msg) {
 }
 
 function initAudioContext() {
+    // If context exists but is closed (mobile browser killed it), tear down and rebuild
+    if (audioCtx && audioCtx.state === 'closed') {
+        audioCtx = null;
+        analyser = null;
+        sourceNode = null;
+    }
     if (audioCtx) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         return;
@@ -1578,13 +1584,15 @@ async function pollAudio(ytId) {
 
 function playAudioFile(url) {
     console.log('[JamWall] Playing audio:', url);
-    // Like jcink_audio: set src and play first, visualization is optional
     audioEl.src = url;
-    audioEl.play().then(() => {
+    audioEl.play().then(async () => {
         console.log('[JamWall] Playback started, duration:', audioEl.duration);
-        // Only init Web Audio API after playback succeeds
         try {
             initAudioContext();
+            // Ensure context is running before starting visualizer
+            if (audioCtx && audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
             startVisualization();
         } catch (e) {
             console.warn('[JamWall] Visualization failed (playback unaffected):', e);
@@ -1602,7 +1610,11 @@ let vizParticles = []; // sparkle particle pool
 
 function startVisualization() {
     if (!analyser) return;
+    // Cancel any existing animation loop before starting a new one
+    if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+
     const canvas = document.getElementById('npCanvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
     // Retina support
@@ -1858,7 +1870,7 @@ function seekAudio(e) {
 }
 
 function stopPlayback() {
-    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+    if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); }
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
     vizPeaks = []; vizPrevValues = []; vizParticles = [];
     document.getElementById('nowPlaying').classList.remove('active');
@@ -1870,6 +1882,16 @@ function stopPlayback() {
     playlist = [];
     playlistIndex = -1;
 }
+
+// Resume audio context and visualizer when returning to the tab
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && audioCtx && currentlyPlaying) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (!audioEl.paused && analyser && !animFrameId) {
+            startVisualization();
+        }
+    }
+});
 
 // ===== DEBUG =====
 async function loadDebug() {
