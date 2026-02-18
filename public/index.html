@@ -1671,11 +1671,13 @@ function startVisualization() {
     const vizAccent = styles.getPropertyValue('--accent').trim();
     const vizSecondary = styles.getPropertyValue('--accent-secondary').trim();
     const vizLight = styles.getPropertyValue('--accent-light').trim();
-    // Parse rgb for alpha variants
-    const rgbMatch = vizAccent.match(/\d+/g) || [108, 92, 231];
-    const [ar, ag, ab] = rgbMatch;
-    const lightMatch = vizLight.match(/\d+/g) || [139, 92, 246];
-    const [lr, lg, lb] = lightMatch;
+    // Parse hex (#RRGGBB) to [r, g, b] decimals for rgba() usage
+    function hexToRgb(hex, fallback) {
+        const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+        return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : fallback;
+    }
+    const [ar, ag, ab] = hexToRgb(vizAccent, [108, 92, 231]);
+    const [lr, lg, lb] = hexToRgb(vizLight, [139, 92, 246]);
     const barGradUp = ctx.createLinearGradient(0, midY, 0, 0);
     barGradUp.addColorStop(0, vizAccent);
     barGradUp.addColorStop(0.6, vizLight);
@@ -2113,7 +2115,11 @@ function restartVisualizationIfActive() {
     if (animFrameId && analyser) {
         cancelAnimationFrame(animFrameId);
         animFrameId = null;
-        startVisualization();
+        try {
+            startVisualization();
+        } catch (e) {
+            console.warn('[JamWall] Visualization restart failed:', e);
+        }
     }
 }
 
