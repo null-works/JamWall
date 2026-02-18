@@ -2,8 +2,19 @@
 set -e
 
 # Ensure data directory exists and is writable
-mkdir -p /var/www/data /var/www/data/audio
+mkdir -p /var/www/data /var/www/data/audio /var/www/data/audio/logs
 chown -R www-data:www-data /var/www/data
+
+# Clean up broken/truncated MP3 files on startup (from failed conversions)
+for mp3 in /var/www/data/audio/*.mp3; do
+    [ -f "$mp3" ] || continue
+    size=$(stat -c%s "$mp3" 2>/dev/null || echo 0)
+    if [ "$size" -lt 102400 ]; then
+        id=$(basename "$mp3" .mp3)
+        echo "Removing broken MP3: $id ($size bytes)"
+        rm -f "$mp3" "/var/www/data/audio/$id.err" "/var/www/data/audio/$id.lock"
+    fi
+done
 
 # Initialize DB if schema exists and DB doesn't
 if [ ! -f /var/www/data/jamwall.sqlite ] && [ -f /var/www/data/schema.sql ]; then
