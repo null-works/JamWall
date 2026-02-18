@@ -1269,7 +1269,8 @@ let audioReady = {}; // { ytId: url } — cache of ready audio URLs
 function initAudio() {
     if (audioEl) return;
     audioEl = new Audio();
-    audioEl.crossOrigin = 'anonymous';
+    // No crossOrigin needed — audio is same-origin, and setting it
+    // forces a CORS preflight that fails if server headers are missing
     audioEl.addEventListener('ended', () => stopPlayback());
     audioEl.addEventListener('timeupdate', () => {
         if (audioEl.duration) {
